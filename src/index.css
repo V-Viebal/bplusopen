@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* The 4 Elements Palette: Fresh & Modern Organic Luxury */
+  --color-earth: #737D5A;
+  --color-fire: #9B522E;
+  --color-water: #798E9D;
+  --color-air: #DED9CD;
+  --color-air-light: #F8F6F2;
+  --color-air-card: #EFECE6;
+
+  --color-timber-dark: #221F1C;
+  --color-timber-rich: #9B522E;
+  --color-timber-caramel: #9B522E;
+  --color-timber-patina: #798E9D;
+  --color-parchment: #F8F6F2;
+  --color-parchment-subtle: #EFECE6;
+}
+
+html, body {
+  scroll-behavior: smooth;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+*, ::before, ::after {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-serif, .font-display, .font-sans, h1, h2, h3, h4, h5, h6 {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Prevent auto-zooming on iOS form inputs while ensuring large readable text */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Smooth touch scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

@@ -1,0 +1,8 @@
+{
+  "name": "B+Open 3",
+  "description": "B+Open: Living beyond walls. Heirloom-quality luxury outdoor furniture crafted from 100% FSC®-certified Bolivian Ipe timber.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
