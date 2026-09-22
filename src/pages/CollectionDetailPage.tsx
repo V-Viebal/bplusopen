@@ -716,7 +716,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
           {galleryViewMode === 'carousel' && (
             <div className="space-y-4">
               {/* Main Feature Image Stage */}
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] lg:aspect-[21/9] bg-[#1C1A17] rounded-xs overflow-hidden border border-[#EAE3DA] shadow-md group">
+              <div className="collection-gallery-4x3 relative aspect-[4/3] bg-[#1C1A17] rounded-xs overflow-hidden border border-[#EAE3DA] shadow-md group">
                 <InlineEditableImage
                   record="collection"
                   recordId={collection.id}
@@ -785,7 +785,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                     <button
                       key={idx}
                       onClick={() => setActiveGalleryIndex(idx)}
-                      className={`relative aspect-[16/10] sm:aspect-[16/9] rounded-xs overflow-hidden border-2 transition-all cursor-pointer group ${
+                      className={`collection-gallery-4x3 relative aspect-[4/3] rounded-xs overflow-hidden border-2 transition-all cursor-pointer group ${
                         isActive
                           ? 'border-[#5C3822] ring-2 ring-[#5C3822]/40 shadow-sm scale-102'
                           : 'border-[#EAE3DA] opacity-65 hover:opacity-100 hover:border-[#8C5535]'
@@ -822,7 +822,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                   onClick={() => setLightboxIndex(idx)}
                   className="group bg-white border border-[#EAE3DA] rounded-xs overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col justify-between hover:border-[#C4A482]"
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-[#1C1A17]">
+                  <div className="collection-gallery-4x3 relative aspect-[4/3] overflow-hidden bg-[#1C1A17]">
                     <InlineEditableImage
                       record="collection"
                       recordId={collection.id}
@@ -1342,7 +1342,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                     key={ens.id}
                     className="bg-white border border-[#EAE3DA] rounded-xs overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
                   >
-                    <div className="relative aspect-[16/10] overflow-hidden bg-[#EAE4D9]">
+                    <div className="relative aspect-[4/3] overflow-hidden bg-[#EAE4D9]">
                       <InlineEditableImage
                         record="collection"
                         recordId={collection.id}
@@ -1446,7 +1446,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                     }`}
                   >
                     <div
-                      className="w-full aspect-[16/9] rounded-xs border border-black/10 shadow-inner mb-2.5 relative"
+                      className="w-full aspect-[4/3] rounded-xs border border-black/10 shadow-inner mb-2.5 relative"
                       style={{ backgroundColor: swatch.colorHex }}
                     >
                       {isSelected && (
@@ -1498,7 +1498,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                   onClick={() => handleCollectionSwitch(col.id)}
                   className="group bg-white border border-[#EAE3DA] rounded-xs overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col justify-between"
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-[#EAE4D9]">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-[#EAE4D9]">
                     <InlineEditableImage
                       record="collection"
                       recordId={col.id}

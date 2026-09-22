@@ -111,7 +111,7 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
                         field="heroImage"
                         value={col.heroImage}
                         alt={displayName}
-                        className="w-full h-[380px] sm:h-[460px] object-cover object-center group-hover:scale-102 transition-transform duration-700"
+                      className="w-full aspect-[4/3] object-cover object-center group-hover:scale-102 transition-transform duration-700"
                       />
                       <div className="absolute top-4 left-4 bg-[#1C1A17]/85 backdrop-blur-xs text-white text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-xs">
                         {col.itemCount} {isVi ? 'Thiết kế di sản' : 'Heirloom Pieces'}

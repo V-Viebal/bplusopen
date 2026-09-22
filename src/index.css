@@ -53,3 +53,10 @@ input, select, textarea {
   scrollbar-width: none;
 }
 
+/* Keep the collection gallery presentation consistent with the 4:3 reference. */
+.collection-gallery-4x3 {
+  aspect-ratio: 4 / 3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
