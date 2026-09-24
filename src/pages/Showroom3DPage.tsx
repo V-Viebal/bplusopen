@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PageId } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { InlineEditableImage } from '../components/InlineEditableImage';
 import { 
   Maximize2, 
   Compass, 
@@ -25,12 +26,15 @@ export const Showroom3DPage: React.FC<Showroom3DPageProps> = ({ onNavigate }) =>
       {/* 1. TOP COVER WITH 3D SHOWROOM EMBED (Matches jensenoutdoor.com/3d-showroom/) */}
       <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center pt-6 sm:pt-8 pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Cover Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url('https://www.jensenoutdoor.com/wp-content/uploads/2020/12/coral-gray-70401-70441-70711-h-1.jpg')`,
-          }}
-        >
+        <div className="absolute inset-0">
+          <InlineEditableImage
+            record="collection"
+            recordId="showroom-3d"
+            field="heroImage"
+            value="https://www.jensenoutdoor.com/wp-content/uploads/2020/12/coral-gray-70401-70441-70711-h-1.jpg"
+            alt={isVi ? 'Showroom 3D' : '3D showroom'}
+            className="h-full w-full object-cover"
+          />
           {/* 70% dark overlay matching has-background-dim-70 in original HTML */}
           <div className="absolute inset-0 bg-black/75 backdrop-blur-[1px]" />
         </div>

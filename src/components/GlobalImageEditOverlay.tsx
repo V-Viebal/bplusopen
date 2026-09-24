@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ImagePlus, Link2, RotateCcw, X } from 'lucide-react';
 import { useCatalogData } from '../context/CatalogDataContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -22,6 +22,7 @@ export const GlobalImageEditOverlay: React.FC = () => {
   const [draft, setDraft] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState('');
+  const previousOverrides = useRef<Record<string, string>>(edits.images || {});
 
   const imageEdits = edits.images || {};
   const selectedOriginal = selectedSource;
@@ -56,12 +57,19 @@ export const GlobalImageEditOverlay: React.FC = () => {
         if (!isEditableImage(image)) return;
         const original = image.dataset.adminOriginalSrc || image.getAttribute('src') || '';
         if (!original) return;
-        image.dataset.adminOriginalSrc = original;
-        const replacement = imageEdits[original];
-        if (replacement && image.getAttribute('src') !== replacement) {
+        const current = image.getAttribute('src') || '';
+        if (current !== original && current !== imageEdits[original] && current !== previousOverrides.current[original]) {
+          image.dataset.adminOriginalSrc = current;
+        } else {
+          image.dataset.adminOriginalSrc = original;
+        }
+        const source = image.dataset.adminOriginalSrc;
+        const replacement = imageEdits[source] || source;
+        if (current !== replacement) {
           image.setAttribute('src', replacement);
         }
       });
+      previousOverrides.current = imageEdits;
     };
 
     applyImageOverrides();

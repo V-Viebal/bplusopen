@@ -31,6 +31,7 @@ import { AdminPage } from './pages/AdminPage';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminEditBar } from './components/AdminEditBar';
 import { GlobalImageEditOverlay } from './components/GlobalImageEditOverlay';
+import { GlobalTextEditOverlay } from './components/GlobalTextEditOverlay';
 import { useCatalogData } from './context/CatalogDataContext';
 
 export default function App() {
@@ -121,6 +122,17 @@ export default function App() {
     setEditMode,
   } = useCatalogData();
   const { language } = useLanguage();
+
+  // A deleted product cannot remain open in its detail page or quick-view modal.
+  useEffect(() => {
+    if (activeProductModal && !catalogProducts.some((product) => product.id === activeProductModal.id)) {
+      setActiveProductModal(null);
+    }
+    if (currentPage === 'product-detail' && !catalogProducts.some((product) => product.id === selectedProductId)) {
+      setCurrentPage('furniture');
+      window.location.hash = 'furniture';
+    }
+  }, [activeProductModal, catalogProducts, currentPage, selectedProductId]);
 
   // Handle URL hash changes (browser back/forward navigation)
   useEffect(() => {
@@ -595,6 +607,7 @@ export default function App() {
 
       <AdminEditBar onOpenAdmin={() => handleNavigate('admin')} />
       <GlobalImageEditOverlay />
+      <GlobalTextEditOverlay />
 
       <AdminLoginModal
         isOpen={isAdminLoginOpen}
@@ -604,4 +617,3 @@ export default function App() {
     </div>
   );
 }
-

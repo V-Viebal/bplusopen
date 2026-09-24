@@ -13,6 +13,7 @@ import {
   Save,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { Collection, PageId, Product } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -85,6 +86,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     logout,
     saveEdits,
     resetEdits,
+    deleteProduct,
+    restoreProduct,
   } = useCatalogData();
 
   const [activeTab, setActiveTab] = useState<EditorTab>('collections');
@@ -208,6 +211,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     window.setTimeout(() => setSaveMessage(''), 3500);
   };
 
+  const handleDeleteProduct = () => {
+    if (!isEditMode || !selectedProduct) return;
+    const confirmed = window.confirm(
+      isVi
+        ? `Xóa "${selectedProduct.name}" khỏi website? Bạn có thể khôi phục sản phẩm bên dưới.`
+        : `Remove "${selectedProduct.name}" from the website? You can restore it below.`,
+    );
+    if (!confirmed) return;
+    deleteProduct(selectedProduct.id);
+    setSaveMessage(isVi ? 'Đã xóa sản phẩm.' : 'Product removed.');
+  };
+
   if (!isAdminAuthenticated) {
     return (
       <div data-admin-ui className="min-h-[calc(100vh-184px)] bg-[#F8F6F2] px-4 py-12 sm:px-6 lg:px-8">
@@ -312,7 +327,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
             },
             {
               label: isVi ? 'Đã chỉnh sửa' : 'Edited records',
-              value: Object.keys(edits.collections).length + Object.keys(edits.products).length + Object.keys(edits.images || {}).length,
+              value: Object.keys(edits.collections).length + Object.keys(edits.products).length + Object.keys(edits.images || {}).length + (edits.deletedProductIds || []).length,
               icon: Pencil,
             },
             {
@@ -589,6 +604,40 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                     />
                     CAD available
                   </label>
+                </div>
+                {isEditMode && (
+                  <div className="border-t border-[#EAE3DA] pt-5">
+                    <button
+                      type="button"
+                      onClick={handleDeleteProduct}
+                      className="inline-flex items-center gap-2 rounded-xs border border-red-300 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isVi ? 'Xóa sản phẩm này' : 'Delete this product'}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+            {(edits.deletedProductIds || []).length > 0 && (
+              <section className="rounded-xs border border-[#DED9CD] bg-white p-5 shadow-xs lg:col-span-2">
+                <h3 className="mb-3 text-sm font-semibold text-[#1C1A17]">
+                  {isVi ? 'Sản phẩm đã xóa — có thể khôi phục' : 'Deleted products — available to restore'}
+                </h3>
+                <div className="space-y-2">
+                  {edits.deletedProductIds.map((id) => (
+                    <div key={id} className="flex items-center justify-between gap-3 border-t border-[#EAE3DA] pt-2 text-sm">
+                      <span className="truncate">{id}</span>
+                      <button
+                        type="button"
+                        onClick={() => restoreProduct(id)}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-xs border border-[#DED9CD] px-3 py-2 text-xs font-semibold hover:border-[#9B522E]"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        {isVi ? 'Khôi phục' : 'Restore'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}

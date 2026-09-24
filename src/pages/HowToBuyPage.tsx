@@ -19,6 +19,7 @@ import {
   Navigation
 } from 'lucide-react';
 import heroImg from '../assets/images/how_to_buy_hero_1789045548664.jpg';
+import { InlineEditableImage } from '../components/InlineEditableImage';
 
 interface HowToBuyPageProps {
   onNavigate: (page: PageId, extra?: { category?: string; collection?: string; tab?: 'retailers' | 'design-showrooms' | 'contract-hospitality' }) => void;
@@ -130,11 +131,18 @@ export const HowToBuyPage: React.FC<HowToBuyPageProps> = ({
       */}
       <section 
         id="how-to-buy-hero"
-        className="relative w-full min-h-[90vh] md:min-h-screen flex items-center justify-center bg-[#1A1815] bg-cover bg-center overflow-hidden"
-        style={{
-          backgroundImage: `url(${heroImg})`,
-        }}
+        className="relative w-full min-h-[90vh] md:min-h-screen flex items-center justify-center bg-[#1A1815] overflow-hidden"
       >
+        <div className="absolute inset-0">
+          <InlineEditableImage
+            record="collection"
+            recordId="how-to-buy"
+            field="heroImage"
+            value={heroImg}
+            alt={isVi ? 'Không gian ngoài trời' : 'Outdoor terrace'}
+            className="h-full w-full object-cover"
+          />
+        </div>
         {/* Cinematic dark tint overlay for crisp typography legibility */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/75" />
 

@@ -6,6 +6,7 @@ import { formatDimensionsSummary, cleanMm } from '../utils/dimensionUtils';
 import { InlineEditableText } from '../components/InlineEditableText';
 import { InlineEditableContent } from '../components/InlineEditableContent';
 import { InlineEditableImage } from '../components/InlineEditableImage';
+import { DeleteProductButton } from '../components/DeleteProductButton';
 import { useCatalogData } from '../context/CatalogDataContext';
 import {
   ArrowLeft,
@@ -1046,6 +1047,7 @@ export const CollectionDetailPage: React.FC<CollectionDetailPageProps> = ({
                       }`}
                       onClick={() => onOpenProductModal(product)}
                     >
+                      <DeleteProductButton product={product} className="absolute bottom-2 right-2" />
                       <InlineEditableImage
                         record="product"
                         recordId={product.id}

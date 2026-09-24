@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { formatDimensionsSummary } from '../utils/dimensionUtils';
 import { InlineEditableImage } from '../components/InlineEditableImage';
 import { InlineEditableText } from '../components/InlineEditableText';
+import { DeleteProductButton } from '../components/DeleteProductButton';
 import { useCatalogData } from '../context/CatalogDataContext';
 
 interface CollectionsPageProps {
@@ -193,6 +194,7 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
                           className="group bg-white border border-[#EAE3DA] rounded-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow"
                         >
                           <div className="relative aspect-[4/3] bg-[#F7F4EF] overflow-hidden">
+                            <DeleteProductButton product={product} className="absolute bottom-2 right-2" />
                             <InlineEditableImage
                               record="product"
                               recordId={product.id}

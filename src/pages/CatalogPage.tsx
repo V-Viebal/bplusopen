@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PageId } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { InlineEditableImage } from '../components/InlineEditableImage';
 import { 
   Download, 
   ExternalLink, 
@@ -28,13 +29,16 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ onNavigate, onOpenCata
       {/* 1. TOP FULL-SCREEN DIGITAL FLIPBOOK VIEWER SECTION */}
       <section className="relative w-full min-h-[85vh] sm:min-h-[92vh] flex flex-col items-center justify-center pt-6 sm:pt-8 pb-12 px-4 sm:px-6 lg:px-8 bg-[#181818] overflow-hidden">
         {/* Subtle Textured Background Pattern */}
-        <div 
-          className="absolute inset-0 opacity-15 pointer-events-none bg-repeat"
-          style={{
-            backgroundImage: `url('https://www.jensenoutdoor.com/wp-content/uploads/2024/03/Gray.png')`,
-            backgroundSize: '120px 120px'
-          }}
-        />
+        <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">
+          <InlineEditableImage
+            record="collection"
+            recordId="catalog"
+            field="heroImage"
+            value="https://www.jensenoutdoor.com/wp-content/uploads/2024/03/Gray.png"
+            alt={isVi ? 'Nền catalog' : 'Catalog texture'}
+            className="h-full w-full object-cover"
+          />
+        </div>
 
         {/* Ambient Top Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-white/5 blur-3xl pointer-events-none" />

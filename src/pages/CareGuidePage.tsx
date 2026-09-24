@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PageId } from '../types';
 import { InlineEditableContent } from '../components/InlineEditableContent';
+import { InlineEditableImage } from '../components/InlineEditableImage';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Download, 
@@ -42,12 +43,15 @@ export const CareGuidePage: React.FC<CareGuidePageProps> = ({ onNavigate }) => {
       {/* 1. HERO COVER SECTION */}
       <section className="relative w-full h-[65vh] sm:h-[75vh] min-h-[480px] flex items-center justify-center overflow-hidden">
         {/* Background Image matching Jensen Outdoor */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
-          style={{
-            backgroundImage: `url('https://www.jensenoutdoor.com/wp-content/uploads/2020/12/coral-gray-70421-70401-opal-63710-h-1.jpg')`,
-          }}
-        >
+        <div className="absolute inset-0 transition-transform duration-1000 scale-105">
+          <InlineEditableImage
+            record="collection"
+            recordId="care-guide"
+            field="heroImage"
+            value="https://www.jensenoutdoor.com/wp-content/uploads/2020/12/coral-gray-70421-70401-opal-63710-h-1.jpg"
+            alt={isVi ? 'Bảo dưỡng nội thất ngoài trời' : 'Outdoor furniture care'}
+            className="h-full w-full object-cover"
+          />
           {/* Subtle vignette / dark overlay */}
           <div className="absolute inset-0 bg-black/40" />
         </div>

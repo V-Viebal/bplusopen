@@ -16,6 +16,7 @@ export type CatalogEdits = {
   products: Record<string, Partial<Product>>;
   images: Record<string, string>;
   content: Record<string, string>;
+  deletedProductIds: string[];
 };
 
 type CatalogDataContextValue = {
@@ -32,7 +33,10 @@ type CatalogDataContextValue = {
   saveImageEdit: (originalSrc: string, replacementSrc: string) => void;
   removeImageEdit: (originalSrc: string) => void;
   saveContentEdit: (contentKey: string, replacementText: string) => void;
+  saveContentEdits: (patch: Record<string, string>) => void;
   removeContentEdit: (contentKey: string) => void;
+  deleteProduct: (id: string) => void;
+  restoreProduct: (id: string) => void;
   resetEdits: () => void;
 };
 
@@ -43,6 +47,7 @@ const EMPTY_EDITS: CatalogEdits = {
   products: {},
   images: {},
   content: {},
+  deletedProductIds: [],
 };
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -62,6 +67,9 @@ const readStoredEdits = (): CatalogEdits => {
       products: parsed.products && typeof parsed.products === 'object' ? parsed.products : {},
       images: parsed.images && typeof parsed.images === 'object' ? parsed.images : {},
       content: parsed.content && typeof parsed.content === 'object' ? parsed.content : {},
+      deletedProductIds: Array.isArray(parsed.deletedProductIds)
+        ? parsed.deletedProductIds.filter((id): id is string => typeof id === 'string')
+        : [],
     };
   } catch {
     return clone(EMPTY_EDITS);
@@ -82,6 +90,8 @@ const applyEditsToCatalog = (edits: CatalogEdits) => {
     const product = PRODUCTS.find((item) => item.id === id);
     if (product) Object.assign(product, clone(patch));
   });
+  const deleted = new Set(edits.deletedProductIds || []);
+  PRODUCTS.splice(0, PRODUCTS.length, ...PRODUCTS.filter((product) => !deleted.has(product.id)));
 };
 
 const buildEffectiveCatalog = (edits: CatalogEdits) => {
@@ -98,7 +108,8 @@ const buildEffectiveCatalog = (edits: CatalogEdits) => {
     if (product) Object.assign(product, clone(patch));
   });
 
-  return { collections, products };
+  const deleted = new Set(edits.deletedProductIds || []);
+  return { collections, products: products.filter((product) => !deleted.has(product.id)) };
 };
 
 const readAdminSession = () => {
@@ -121,7 +132,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   });
   const [revision, setRevision] = useState(0);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(readAdminSession);
-  const [isEditMode, setIsEditModeState] = useState(false);
+  const [isEditMode, setIsEditModeState] = useState(readAdminSession);
   const { collections, products } = useMemo(() => buildEffectiveCatalog(edits), [edits]);
 
   const setEditMode = useCallback((enabled: boolean) => {
@@ -181,21 +192,60 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     saveEdits({ ...edits, images: nextImages });
   }, [edits, saveEdits]);
 
-  const saveContentEdit = useCallback((contentKey: string, replacementText: string) => {
-    saveEdits({
-      ...edits,
-      content: {
-        ...edits.content,
-        [contentKey]: replacementText,
-      },
+  const saveContentEdits = useCallback((patch: Record<string, string>) => {
+    setEdits((current) => {
+      const next = {
+        ...current,
+        content: { ...current.content, ...patch },
+      };
+      try {
+        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // The current session still reflects the changes.
+      }
+      setRevision((value) => value + 1);
+      return next;
     });
-  }, [edits, saveEdits]);
+  }, []);
+
+  const saveContentEdit = useCallback((contentKey: string, replacementText: string) => {
+    saveContentEdits({ [contentKey]: replacementText });
+  }, [saveContentEdits]);
 
   const removeContentEdit = useCallback((contentKey: string) => {
-    const nextContent = { ...edits.content };
-    delete nextContent[contentKey];
-    saveEdits({ ...edits, content: nextContent });
-  }, [edits, saveEdits]);
+    setEdits((current) => {
+      const nextContent = { ...current.content };
+      delete nextContent[contentKey];
+      const next = { ...current, content: nextContent };
+      try {
+        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // The current session still reflects the changes.
+      }
+      setRevision((value) => value + 1);
+      return next;
+    });
+  }, []);
+
+  const updateDeletedProducts = useCallback((id: string, deleted: boolean) => {
+    if (!BASE_PRODUCTS.some((product) => product.id === id)) return;
+    setEdits((current) => {
+      const ids = new Set(current.deletedProductIds || []);
+      if (deleted) ids.add(id);
+      else ids.delete(id);
+      const next = { ...current, deletedProductIds: [...ids] };
+      applyEditsToCatalog(next);
+      try {
+        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Keep the current session usable when storage is unavailable.
+      }
+      setRevision((value) => value + 1);
+      return next;
+    });
+  }, []);
+  const deleteProduct = useCallback((id: string) => updateDeletedProducts(id, true), [updateDeletedProducts]);
+  const restoreProduct = useCallback((id: string) => updateDeletedProducts(id, false), [updateDeletedProducts]);
 
   const resetEdits = useCallback(() => {
     const empty = clone(EMPTY_EDITS);
@@ -224,10 +274,13 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       saveImageEdit,
       removeImageEdit,
       saveContentEdit,
+      saveContentEdits,
       removeContentEdit,
+      deleteProduct,
+      restoreProduct,
       resetEdits,
     }),
-    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, saveImageEdit, removeImageEdit, saveContentEdit, removeContentEdit, resetEdits],
+    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits],
   );
 
   return <CatalogDataContext.Provider value={value}>{children}</CatalogDataContext.Provider>;

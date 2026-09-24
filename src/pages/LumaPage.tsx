@@ -8,6 +8,7 @@ import { useCatalogData } from '../context/CatalogDataContext';
 import { InlineEditableText } from '../components/InlineEditableText';
 import { InlineEditableImage } from '../components/InlineEditableImage';
 import { InlineEditableContent } from '../components/InlineEditableContent';
+import { DeleteProductButton } from '../components/DeleteProductButton';
 
 interface Props {
   productId?: string;
@@ -30,7 +31,8 @@ export function LumaPage({ productId, savedProductIds, onToggleSave, onNavigate 
   const title = (p: Product) => vi ? p.nameVi || p.name : p.name;
   const openProduct = (p: Product) => { setActiveImage(null); onNavigate('product-detail', { productId: p.id }); };
   const download = <a href={catalog} download className="inline-flex items-center justify-center gap-2 border border-current px-5 py-3 text-sm font-semibold hover:opacity-70"><Download size={17}/>{vi ? 'Tải catalog LUMA 2026' : 'Download LUMA 2026 catalog'}</a>;
-  const card = (p: LumaProduct) => <article key={p.id} className="bg-white border border-[#e3e1d9]">
+  const card = (p: LumaProduct) => <article key={p.id} className="relative bg-white border border-[#e3e1d9]">
+    <DeleteProductButton product={p} className="absolute right-2 top-2" />
     <button onClick={() => openProduct(p)} className="block w-full overflow-hidden group" aria-label={title(p)}><InlineEditableImage record="product" recordId={p.id} field="imageUrl" value={p.imageUrl} alt={title(p)} className="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105"/></button>
     <div className="p-5 border-t border-[#efeee7]">
       <p className="text-[10px] tracking-[.18em] uppercase text-[#65724d] mb-2">LUMA / 2026</p>
@@ -84,4 +86,3 @@ export function LumaPage({ productId, savedProductIds, onToggleSave, onNavigate 
     <section className="bg-[#3d5029] text-white px-6 py-16 text-center"><h2 className="text-3xl font-light mb-6"><InlineEditableContent contentKey="luma.footer.title" value={vi ? 'LUMA cho không gian của bạn' : 'LUMA for your space'} as="span" /></h2><p className="mb-8 opacity-80">info@bplusfurniture.com.vn · +84 906 630 030</p>{download}</section>
   </div>;
 }
-

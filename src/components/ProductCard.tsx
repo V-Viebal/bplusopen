@@ -2,6 +2,7 @@ import React from 'react';
 import { Product } from '../types';
 import { Eye, Bookmark, Check, TreePine } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { DeleteProductButton } from './DeleteProductButton';
 import { formatCompactDimensions } from '../utils/dimensionUtils';
 import { InlineEditableImage } from './InlineEditableImage';
 import { InlineEditableText } from './InlineEditableText';
@@ -44,6 +45,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           }}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
         />
+        <DeleteProductButton product={product} className="absolute bottom-3 right-3" />
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
