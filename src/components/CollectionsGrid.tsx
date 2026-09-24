@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useCatalogData } from '../context/CatalogDataContext';
 import { InlineEditableText } from './InlineEditableText';
 import { InlineEditableImage } from './InlineEditableImage';
+import { getCollectionCardName } from '../utils/collectionDisplay';
 
 interface CollectionsGridProps {
   onSelectCollection: (collectionId: string) => void;
@@ -45,7 +46,11 @@ export const CollectionsGrid: React.FC<CollectionsGridProps> = ({ onSelectCollec
         {/* Collections Editorial Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {collections.map((col) => {
-            const displayName = isVi && col.nameVi ? col.nameVi : col.name;
+            const displayName = getCollectionCardName(
+              col.id,
+              language,
+              isVi && col.nameVi ? col.nameVi : col.name,
+            );
             const displayDesc = isVi && col.descriptionVi ? col.descriptionVi : col.description;
             const displaySpecs = isVi && col.highlightSpecsVi ? col.highlightSpecsVi : col.highlightSpecs;
 

@@ -19,6 +19,7 @@ import { CatalogDownloadModal } from '../components/CatalogDownloadModal';
 import { InlineEditableText } from '../components/InlineEditableText';
 import { InlineEditableImage } from '../components/InlineEditableImage';
 import { COLLECTIONS as CATALOG_COLLECTIONS } from '../data/furnitureData';
+import { getCollectionCardName } from '../utils/collectionDisplay';
 
 interface HomePageProps {
   onNavigate: (page: PageId, extra?: { category?: string; collection?: string; productId?: string; tab?: string }) => void;
@@ -560,9 +561,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               >
                 {(() => {
                   const catalogCollection = CATALOG_COLLECTIONS.find((item) => item.id === col.targetCollection);
-                  const cardName = catalogCollection
-                    ? (isVi && catalogCollection.nameVi ? catalogCollection.nameVi : catalogCollection.name)
-                    : (isVi ? col.nameVi : col.name);
+                  const cardName = getCollectionCardName(
+                    col.targetCollection,
+                    language,
+                    isVi ? col.nameVi : col.name,
+                  );
                   const cardDescription = catalogCollection
                     ? (isVi && catalogCollection.descriptionVi ? catalogCollection.descriptionVi : catalogCollection.description)
                     : (isVi ? col.descriptionVi : col.description);
