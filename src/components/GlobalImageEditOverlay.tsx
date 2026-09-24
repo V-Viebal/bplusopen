@@ -14,6 +14,7 @@ export const GlobalImageEditOverlay: React.FC = () => {
     isEditMode,
     saveImageEdit,
     removeImageEdit,
+    uploadImage,
   } = useCatalogData();
 
   const [hoveredImage, setHoveredImage] = useState<HTMLImageElement | null>(null);
@@ -26,7 +27,7 @@ export const GlobalImageEditOverlay: React.FC = () => {
 
   const imageEdits = edits.images || {};
   const selectedOriginal = selectedSource;
-  const selectedOverride = selectedOriginal ? imageEdits[selectedOriginal] : undefined;
+  const [isUploading, setIsUploading] = useState(false);
 
   const refreshHoveredRect = () => {
     if (!hoveredImage || !document.body.contains(hoveredImage)) {
@@ -132,22 +133,25 @@ export const GlobalImageEditOverlay: React.FC = () => {
     if (hoveredImage) selectImage(hoveredImage);
   };
 
-  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_UPLOAD_BYTES) {
       setError(isVi ? 'File quá lớn. Vui lòng chọn file dưới 5MB.' : 'File is too large. Choose an image under 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setDraft(reader.result);
-        setError('');
-      }
-    };
-    reader.onerror = () => setError(isVi ? 'Không đọc được file hình.' : 'Could not read this image file.');
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      setDraft(await uploadImage(file));
+      setError('');
+    } catch (uploadError) {
+      setError(uploadError instanceof Error
+        ? uploadError.message
+        : (isVi ? 'Không tải được file hình.' : 'Could not upload this image.'));
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
   };
 
   const closeEditor = () => {
@@ -250,7 +254,7 @@ export const GlobalImageEditOverlay: React.FC = () => {
               <button type="button" onClick={closeEditor} className="rounded-xs border border-[#DED9CD] bg-white px-3 py-2 text-xs font-semibold text-[#6B5E52]">
                 {isVi ? 'Hủy' : 'Cancel'}
               </button>
-              <button type="button" onClick={save} className="inline-flex items-center gap-1.5 rounded-xs bg-[#9B522E] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#7F4024]">
+              <button type="button" onClick={save} disabled={isUploading || draft.startsWith('data:')} className="inline-flex items-center gap-1.5 rounded-xs bg-[#9B522E] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#7F4024] disabled:cursor-not-allowed disabled:bg-[#C8B7AA]">
                 <Check className="h-3.5 w-3.5" />
                 {isVi ? 'Lưu hình' : 'Save image'}
               </button>

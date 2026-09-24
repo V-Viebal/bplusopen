@@ -3,6 +3,8 @@ import React, {
   useCallback,
   useContext,
   useMemo,
+  useEffect,
+  useRef,
   useState,
 } from 'react';
 import { COLLECTIONS, PRODUCTS } from '../data/furnitureData';
@@ -10,6 +12,8 @@ import { Collection, Product } from '../types';
 
 const EDITS_STORAGE_KEY = 'b-open-catalog-edits-v1';
 const ADMIN_SESSION_KEY = 'b-open-admin-session-v1';
+const ADMIN_CREDENTIALS_KEY = 'b-open-admin-credentials-v1';
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 export type CatalogEdits = {
   collections: Record<string, Partial<Collection>>;
@@ -38,6 +42,7 @@ type CatalogDataContextValue = {
   deleteProduct: (id: string) => void;
   restoreProduct: (id: string) => void;
   resetEdits: () => void;
+  uploadImage: (file: File) => Promise<string>;
 };
 
 const CatalogDataContext = createContext<CatalogDataContextValue | undefined>(undefined);
@@ -51,6 +56,9 @@ const EMPTY_EDITS: CatalogEdits = {
 };
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 const BASE_COLLECTIONS = clone(COLLECTIONS);
 const BASE_PRODUCTS = clone(PRODUCTS);
@@ -115,7 +123,8 @@ const buildEffectiveCatalog = (edits: CatalogEdits) => {
 const readAdminSession = () => {
   if (typeof window === 'undefined') return false;
   try {
-    return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'authenticated';
+    return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'authenticated'
+      && Boolean(window.sessionStorage.getItem(ADMIN_CREDENTIALS_KEY));
   } catch {
     return false;
   }
@@ -123,6 +132,56 @@ const readAdminSession = () => {
 
 const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'bopen2026';
+
+const getAdminAuthorization = () => {
+  if (typeof window === 'undefined') return '';
+  try {
+    return window.sessionStorage.getItem(ADMIN_CREDENTIALS_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const hasEdits = (value: CatalogEdits) =>
+  Object.keys(value.collections).length > 0
+  || Object.keys(value.products).length > 0
+  || Object.keys(value.images).length > 0
+  || Object.keys(value.content).length > 0
+  || value.deletedProductIds.length > 0;
+
+const removeDataUrls = <T,>(value: T): T => {
+  if (typeof value === 'string') return (value.startsWith('data:') ? '' : value) as T;
+  if (Array.isArray(value)) return value.map((item) => removeDataUrls(item)) as T;
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, removeDataUrls(item)]),
+    ) as T;
+  }
+  return value;
+};
+
+const parseDataUrl = async (dataUrl: string) => {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  if (!blob.type.startsWith('image/')) throw new Error('Only image data URLs can be migrated.');
+  const extension = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
+  return new File([blob], `legacy-upload.${extension}`, { type: blob.type });
+};
+
+const mapDataUrls = async <T,>(value: T, upload: (file: File) => Promise<string>): Promise<T> => {
+  if (typeof value === 'string') {
+    return (value.startsWith('data:') ? await upload(await parseDataUrl(value)) : value) as T;
+  }
+  if (Array.isArray(value)) {
+    return (await Promise.all(value.map((item) => mapDataUrls(item, upload)))) as T;
+  }
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      await Promise.all(Object.entries(value).map(async ([key, item]) => [key, await mapDataUrls(item, upload)])),
+    ) as T;
+  }
+  return value;
+};
 
 export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [edits, setEdits] = useState<CatalogEdits>(() => {
@@ -133,7 +192,46 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [revision, setRevision] = useState(0);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(readAdminSession);
   const [isEditMode, setIsEditModeState] = useState(readAdminSession);
+  const [serverCatalogStatus, setServerCatalogStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [serverHasEdits, setServerHasEdits] = useState(false);
+  const catalogSaveQueue = useRef(Promise.resolve());
+  const migrationStarted = useRef(false);
   const { collections, products } = useMemo(() => buildEffectiveCatalog(edits), [edits]);
+
+  const cacheEdits = useCallback((nextEdits: CatalogEdits) => {
+    try {
+      // Keep the browser cache useful for fast boot, but never put legacy file data in it.
+      window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(removeDataUrls(nextEdits)));
+    } catch {
+      // The server remains the source of truth when browser storage is unavailable.
+    }
+  }, []);
+
+  const persistCatalog = useCallback(async (nextEdits: CatalogEdits) => {
+    const response = await fetch('/api/catalog', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getAdminAuthorization(),
+      },
+      body: JSON.stringify(nextEdits),
+    });
+    if (!response.ok) throw new Error(`Catalog save failed (${response.status}).`);
+  }, []);
+
+  const queueCatalogSave = useCallback((nextEdits: CatalogEdits) => {
+    const save = catalogSaveQueue.current.then(() => persistCatalog(nextEdits));
+    catalogSaveQueue.current = save.catch(() => undefined);
+    void save.catch(() => undefined);
+  }, [persistCatalog]);
+
+  const commitLocalEdits = useCallback((nextEdits: CatalogEdits) => {
+    const normalized = clone(nextEdits);
+    applyEditsToCatalog(normalized);
+    cacheEdits(normalized);
+    setEdits(normalized);
+    setRevision((current) => current + 1);
+  }, [cacheEdits]);
 
   const setEditMode = useCallback((enabled: boolean) => {
     setIsEditModeState(enabled);
@@ -145,6 +243,10 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     try {
       window.sessionStorage.setItem(ADMIN_SESSION_KEY, 'authenticated');
+      window.sessionStorage.setItem(
+        ADMIN_CREDENTIALS_KEY,
+        `Basic ${window.btoa(`${username.trim()}:${password}`)}`,
+      );
     } catch {
       // The in-memory session remains available if browser storage is disabled.
     }
@@ -156,6 +258,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const logout = useCallback(() => {
     try {
       window.sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      window.sessionStorage.removeItem(ADMIN_CREDENTIALS_KEY);
     } catch {
       // Ignore storage failures; the React state still logs the user out.
     }
@@ -165,14 +268,27 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const saveEdits = useCallback((nextEdits: CatalogEdits) => {
     const normalized = clone(nextEdits);
-    applyEditsToCatalog(normalized);
-    try {
-      window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(normalized));
-    } catch {
-      // The current session still reflects the saved values even if storage is unavailable.
+    commitLocalEdits(normalized);
+    queueCatalogSave(normalized);
+  }, [commitLocalEdits, queueCatalogSave]);
+
+  const uploadImage = useCallback(async (file: File) => {
+    if (file.size > MAX_UPLOAD_BYTES) throw new Error('File is too large. Choose an image under 5MB.');
+    if (!file.type.startsWith('image/')) throw new Error('Only image files are accepted.');
+    const response = await fetch('/api/uploads', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type,
+        'X-Filename': file.name,
+        Authorization: getAdminAuthorization(),
+      },
+      body: file,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || typeof payload.url !== 'string') {
+      throw new Error(typeof payload.error === 'string' ? payload.error : 'Image upload failed.');
     }
-    setEdits(normalized);
-    setRevision((current) => current + 1);
+    return payload.url as string;
   }, []);
 
   const saveImageEdit = useCallback((originalSrc: string, replacementSrc: string) => {
@@ -193,71 +309,99 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [edits, saveEdits]);
 
   const saveContentEdits = useCallback((patch: Record<string, string>) => {
-    setEdits((current) => {
-      const next = {
-        ...current,
-        content: { ...current.content, ...patch },
-      };
-      try {
-        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // The current session still reflects the changes.
-      }
-      setRevision((value) => value + 1);
-      return next;
-    });
-  }, []);
+    const next = { ...edits, content: { ...edits.content, ...patch } };
+    commitLocalEdits(next);
+    queueCatalogSave(next);
+  }, [commitLocalEdits, edits, queueCatalogSave]);
 
   const saveContentEdit = useCallback((contentKey: string, replacementText: string) => {
     saveContentEdits({ [contentKey]: replacementText });
   }, [saveContentEdits]);
 
   const removeContentEdit = useCallback((contentKey: string) => {
-    setEdits((current) => {
-      const nextContent = { ...current.content };
-      delete nextContent[contentKey];
-      const next = { ...current, content: nextContent };
-      try {
-        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // The current session still reflects the changes.
-      }
-      setRevision((value) => value + 1);
-      return next;
-    });
-  }, []);
+    const nextContent = { ...edits.content };
+    delete nextContent[contentKey];
+    const next = { ...edits, content: nextContent };
+    commitLocalEdits(next);
+    queueCatalogSave(next);
+  }, [commitLocalEdits, edits, queueCatalogSave]);
 
   const updateDeletedProducts = useCallback((id: string, deleted: boolean) => {
     if (!BASE_PRODUCTS.some((product) => product.id === id)) return;
-    setEdits((current) => {
-      const ids = new Set(current.deletedProductIds || []);
-      if (deleted) ids.add(id);
-      else ids.delete(id);
-      const next = { ...current, deletedProductIds: [...ids] };
-      applyEditsToCatalog(next);
-      try {
-        window.localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Keep the current session usable when storage is unavailable.
-      }
-      setRevision((value) => value + 1);
-      return next;
-    });
-  }, []);
+    const ids = new Set(edits.deletedProductIds || []);
+    if (deleted) ids.add(id);
+    else ids.delete(id);
+    const next = { ...edits, deletedProductIds: [...ids] };
+    commitLocalEdits(next);
+    queueCatalogSave(next);
+  }, [commitLocalEdits, edits, queueCatalogSave]);
   const deleteProduct = useCallback((id: string) => updateDeletedProducts(id, true), [updateDeletedProducts]);
   const restoreProduct = useCallback((id: string) => updateDeletedProducts(id, false), [updateDeletedProducts]);
 
   const resetEdits = useCallback(() => {
     const empty = clone(EMPTY_EDITS);
-    applyEditsToCatalog(empty);
+    commitLocalEdits(empty);
+    queueCatalogSave(empty);
     try {
       window.localStorage.removeItem(EDITS_STORAGE_KEY);
     } catch {
       // Ignore storage failures.
     }
-    setEdits(empty);
-    setRevision((current) => current + 1);
-  }, []);
+  }, [commitLocalEdits, queueCatalogSave]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/catalog', { headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Catalog load failed (${response.status}).`);
+        return response.json() as Promise<Partial<CatalogEdits>>;
+      })
+      .then((remote) => {
+        if (!active) return;
+        const normalized: CatalogEdits = {
+          collections: remote.collections && typeof remote.collections === 'object' ? remote.collections : {},
+          products: remote.products && typeof remote.products === 'object' ? remote.products : {},
+          images: remote.images && typeof remote.images === 'object' ? remote.images : {},
+          content: remote.content && typeof remote.content === 'object' ? remote.content : {},
+          deletedProductIds: Array.isArray(remote.deletedProductIds)
+            ? remote.deletedProductIds.filter((id): id is string => typeof id === 'string')
+            : [],
+        };
+        const remoteHasEdits = hasEdits(normalized);
+        setServerHasEdits(remoteHasEdits);
+        setServerCatalogStatus('loaded');
+        if (remoteHasEdits) commitLocalEdits(normalized);
+      })
+      .catch(() => {
+        if (active) setServerCatalogStatus('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [commitLocalEdits]);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated || serverCatalogStatus !== 'loaded' || serverHasEdits || migrationStarted.current) return;
+    if (!hasEdits(edits)) return;
+    migrationStarted.current = true;
+    let active = true;
+    const migrate = async () => {
+      try {
+        const migrated = await mapDataUrls(edits, uploadImage);
+        await persistCatalog(migrated);
+        if (active) {
+          commitLocalEdits(migrated);
+          setServerHasEdits(hasEdits(migrated));
+        }
+      } catch {
+        migrationStarted.current = false;
+      }
+    };
+    void migrate();
+    return () => {
+      active = false;
+    };
+  }, [commitLocalEdits, edits, isAdminAuthenticated, persistCatalog, serverCatalogStatus, serverHasEdits, uploadImage]);
 
   const value = useMemo(
     () => ({
@@ -279,8 +423,9 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       deleteProduct,
       restoreProduct,
       resetEdits,
+      uploadImage,
     }),
-    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits],
+    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits, uploadImage],
   );
 
   return <CatalogDataContext.Provider value={value}>{children}</CatalogDataContext.Provider>;

@@ -89,8 +89,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
           <p className="text-sm leading-relaxed text-[#6B5E52]">
             {isVi
-              ? 'Đăng nhập để bật chế độ chỉnh sửa và lưu nội dung catalog trên local host.'
-              : 'Sign in to enable edit mode and save catalog content on this local host.'}
+              ? 'Đăng nhập để bật chế độ chỉnh sửa và lưu nội dung catalog trên máy chủ.'
+              : 'Sign in to enable edit mode and save catalog content on the server.'}
           </p>
 
           <label className="block">
@@ -149,4 +149,3 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     </div>
   );
 };
-

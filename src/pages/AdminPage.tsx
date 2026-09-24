@@ -195,15 +195,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
   const handleSave = () => {
     if (!isEditMode) return;
     saveEdits(draftEdits);
-    setSaveMessage(isVi ? 'Đã lưu dữ liệu vào local host.' : 'Changes saved to this local host.');
+    setSaveMessage(isVi ? 'Đã lưu dữ liệu trên máy chủ.' : 'Changes saved to the server.');
     window.setTimeout(() => setSaveMessage(''), 3500);
   };
 
   const handleReset = () => {
     const confirmed = window.confirm(
       isVi
-        ? 'Xóa toàn bộ chỉnh sửa đã lưu trên trình duyệt này?'
-        : 'Remove all saved edits from this browser?',
+        ? 'Xóa toàn bộ chỉnh sửa đã lưu trên máy chủ?'
+        : 'Remove all saved edits from the server?',
     );
     if (!confirmed) return;
     resetEdits();
@@ -237,8 +237,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
             </h1>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-white/70">
               {isVi
-                ? 'Đăng nhập để bật chế độ chỉnh sửa, cập nhật nội dung collection và sản phẩm, sau đó lưu trực tiếp trên local host.'
-                : 'Sign in to edit collection and product content, then save the changes directly on this local host.'}
+                ? 'Đăng nhập để bật chế độ chỉnh sửa, cập nhật nội dung collection và sản phẩm, sau đó lưu trên máy chủ.'
+                : 'Sign in to edit collection and product content, then save the changes on the server.'}
             </p>
           </div>
           <div className="space-y-5 px-6 py-8 sm:px-10">
@@ -246,8 +246,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
               <Database className="mt-0.5 h-5 w-5 shrink-0 text-[#9B522E]" />
               <p>
                 {isVi
-                  ? 'Dữ liệu chỉnh sửa được lưu trong localStorage của trình duyệt này.'
-                  : 'Edits are stored in this browser’s localStorage.'}
+                  ? 'Dữ liệu chỉnh sửa được lưu trên máy chủ và dùng chung cho mọi trình duyệt.'
+                  : 'Edits are saved on the server and shared across browsers.'}
               </p>
             </div>
             <button
@@ -654,7 +654,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
             ) : (
               <>
                 <Database className="h-4 w-4 text-[#9B522E]" />
-                <span>{isVi ? 'Nơi lưu: localStorage của trình duyệt này' : 'Storage: this browser’s localStorage'}</span>
+                <span>{isVi ? 'Nơi lưu: máy chủ dùng chung' : 'Storage: shared server'}</span>
               </>
             )}
           </div>
@@ -681,8 +681,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
 
         <p className="text-center text-[11px] leading-relaxed text-[#9A8D80]">
           {isVi
-            ? 'Đây là CMS local cho bản preview. Khi triển khai thật, cần thay login localStorage bằng backend authentication và cơ sở dữ liệu.'
-            : 'This is a local preview CMS. For production, replace the localStorage login and persistence with backend authentication and a database.'}
+            ? 'Dữ liệu chỉnh sửa và hình ảnh tải lên được lưu trên máy chủ, dùng chung cho mọi người truy cập.'
+            : 'Catalog edits and uploaded images are saved on the server and shared with every visitor.'}
         </p>
       </div>
     </div>

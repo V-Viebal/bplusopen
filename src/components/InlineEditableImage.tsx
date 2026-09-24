@@ -54,9 +54,11 @@ export const InlineEditableImage: React.FC<InlineEditableImageProps> = ({
 }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
-  const { edits, isAdminAuthenticated, isEditMode, saveEdits } = useCatalogData();
+  const { edits, isAdminAuthenticated, isEditMode, saveEdits, uploadImage } = useCatalogData();
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setDraft(value);
@@ -101,14 +103,19 @@ export const InlineEditableImage: React.FC<InlineEditableImageProps> = ({
     setIsOpen(false);
   };
 
-  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setDraft(reader.result);
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    setError('');
+    try {
+      setDraft(await uploadImage(file));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Could not upload this image.');
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
   };
 
   if (!isAdminAuthenticated || !isEditMode) {
@@ -195,6 +202,7 @@ export const InlineEditableImage: React.FC<InlineEditableImageProps> = ({
                   type="button"
                   onClick={() => {
                     setDraft(value);
+                    setError('');
                     setIsOpen(false);
                   }}
                   className="rounded-xs border border-[#DED9CD] bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#6B5E52]"
@@ -204,12 +212,14 @@ export const InlineEditableImage: React.FC<InlineEditableImageProps> = ({
                 <button
                   type="button"
                   onClick={saveImage}
+                  disabled={isUploading || draft.startsWith('data:')}
                   className="inline-flex items-center gap-1.5 rounded-xs bg-[#9B522E] px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white"
                 >
                   <Check className="h-3.5 w-3.5" />
                   {isVi ? 'Lưu hình' : 'Save image'}
                 </button>
               </div>
+              {error && <p className="mt-3 rounded-xs border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
             </div>
           </div>,
           document.body,
