@@ -77,6 +77,11 @@ const isValidAddedProduct = (value: unknown): value is Product => {
     && typeof dimensions.width === 'string';
 };
 
+const getCatalogProducts = (edits: CatalogEdits) => [
+  ...clone(BASE_PRODUCTS),
+  ...clone(edits.addedProducts || []),
+];
+
 const readStoredEdits = (): CatalogEdits => {
   if (typeof window === 'undefined') return clone(EMPTY_EDITS);
 
@@ -104,7 +109,7 @@ const readStoredEdits = (): CatalogEdits => {
 const applyEditsToCatalog = (edits: CatalogEdits) => {
   // Restore the source data first so reset and edits from another tab are deterministic.
   COLLECTIONS.splice(0, COLLECTIONS.length, ...clone(BASE_COLLECTIONS));
-  PRODUCTS.splice(0, PRODUCTS.length, ...clone(BASE_PRODUCTS), ...clone(edits.addedProducts || []));
+  PRODUCTS.splice(0, PRODUCTS.length, ...getCatalogProducts(edits));
 
   Object.entries(edits.collections).forEach(([id, patch]) => {
     const collection = COLLECTIONS.find((item) => item.id === id);
@@ -121,7 +126,7 @@ const applyEditsToCatalog = (edits: CatalogEdits) => {
 
 const buildEffectiveCatalog = (edits: CatalogEdits) => {
   const collections = clone(BASE_COLLECTIONS);
-  const products = [...clone(BASE_PRODUCTS), ...clone(edits.addedProducts || [])];
+  const products = getCatalogProducts(edits);
 
   Object.entries(edits.collections).forEach(([id, patch]) => {
     const collection = collections.find((item) => item.id === id);
@@ -410,7 +415,8 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [cacheEdits, persistCatalog]);
 
   const updateDeletedProducts = useCallback((id: string, deleted: boolean) => {
-    if (!isAdminAuthenticated || !isEditMode || !BASE_PRODUCTS.some((product) => product.id === id)) return;
+    const knownProductIds = new Set(getCatalogProducts(editsRef.current).map((product) => product.id));
+    if (!isAdminAuthenticated || !isEditMode || !knownProductIds.has(id)) return;
     setServerHasEdits(true);
     setEdits((current) => {
       const ids = new Set(current.deletedProductIds || []);
