@@ -129,15 +129,35 @@ app.get('/api/catalog', async (_request, response, next) => {
 
 app.put('/api/catalog', requireAdmin, async (request, response, next) => {
   try {
-    const catalog = normalizeCatalog(request.body);
-    if (containsDataUrl(catalog)) {
+    const requestedCatalog = normalizeCatalog(request.body);
+    if (containsDataUrl(requestedCatalog)) {
       response.status(400).json({ error: 'Catalog edits must reference uploaded files, not data URLs.' });
       return;
     }
 
-    catalogWriteQueue = catalogWriteQueue.catch(() => undefined).then(() => writeCatalog(catalog));
-    await catalogWriteQueue;
-    response.json(catalog);
+    const isDeletedProductUpdate = request.get('x-catalog-operation') === 'update-deleted-product';
+    const productId = typeof request.body?.deletedProductId === 'string'
+      ? request.body.deletedProductId
+      : '';
+    const deleted = request.body?.deleted === true;
+    const write = catalogWriteQueue.catch(() => undefined).then(async () => {
+      const currentCatalog = await readCatalog();
+      let catalog = requestedCatalog;
+      if (isDeletedProductUpdate) {
+        const deletedProductIds = new Set(currentCatalog.deletedProductIds);
+        if (productId) {
+          if (deleted) deletedProductIds.add(productId);
+          else deletedProductIds.delete(productId);
+        } else {
+          requestedCatalog.deletedProductIds.forEach((id) => deletedProductIds.add(id));
+        }
+        catalog = { ...currentCatalog, deletedProductIds: [...deletedProductIds] };
+      }
+      await writeCatalog(catalog);
+      return catalog;
+    });
+    catalogWriteQueue = write.catch(() => undefined);
+    response.json(await write);
   } catch (error) {
     next(error);
   }

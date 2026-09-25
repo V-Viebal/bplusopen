@@ -195,6 +195,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [serverCatalogStatus, setServerCatalogStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [serverHasEdits, setServerHasEdits] = useState(false);
   const catalogSaveQueue = useRef(Promise.resolve());
+  const editsRef = useRef(edits);
   const migrationStarted = useRef(false);
   const { collections, products } = useMemo(() => buildEffectiveCatalog(edits), [edits]);
 
@@ -207,26 +208,45 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
-  const persistCatalog = useCallback(async (nextEdits: CatalogEdits) => {
-    const response = await fetch('/api/catalog', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: getAdminAuthorization(),
-      },
-      body: JSON.stringify(nextEdits),
-    });
-    if (!response.ok) throw new Error(`Catalog save failed (${response.status}).`);
+  const persistCatalog = useCallback(async (nextEdits: CatalogEdits, operation?: { productId: string; deleted: boolean }) => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await fetch('/api/catalog', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getAdminAuthorization(),
+            ...(operation ? { 'X-Catalog-Operation': 'update-deleted-product' } : {}),
+          },
+          body: JSON.stringify(operation
+            ? {
+              deletedProductIds: nextEdits.deletedProductIds,
+              deletedProductId: operation.productId,
+              deleted: operation.deleted,
+            }
+            : nextEdits),
+        });
+        if (!response.ok) throw new Error(`Catalog save failed (${response.status}).`);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('Catalog save failed.');
   }, []);
 
   const queueCatalogSave = useCallback((nextEdits: CatalogEdits) => {
     const save = catalogSaveQueue.current.then(() => persistCatalog(nextEdits));
-    catalogSaveQueue.current = save.catch(() => undefined);
+    catalogSaveQueue.current = save.catch((error) => {
+      window.alert(error instanceof Error ? error.message : 'Catalog save failed.');
+    });
     void save.catch(() => undefined);
   }, [persistCatalog]);
 
   const commitLocalEdits = useCallback((nextEdits: CatalogEdits) => {
     const normalized = clone(nextEdits);
+    editsRef.current = normalized;
     applyEditsToCatalog(normalized);
     cacheEdits(normalized);
     setEdits(normalized);
@@ -326,15 +346,46 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     queueCatalogSave(next);
   }, [commitLocalEdits, edits, queueCatalogSave]);
 
+  const queueDeletedProductSave = useCallback((id: string, deleted: boolean) => {
+    const save = catalogSaveQueue.current
+      .catch(() => undefined)
+      .then(() => persistCatalog(editsRef.current, { productId: id, deleted }));
+    catalogSaveQueue.current = save.catch((error) => {
+      setEdits((current) => {
+        const ids = new Set(current.deletedProductIds || []);
+        if (ids.has(id) !== deleted) return current;
+        if (deleted) ids.delete(id);
+        else ids.add(id);
+        const normalized = clone({ ...current, deletedProductIds: [...ids] });
+        editsRef.current = normalized;
+        applyEditsToCatalog(normalized);
+        cacheEdits(normalized);
+        return normalized;
+      });
+      setRevision((current) => current + 1);
+      window.alert(error instanceof Error
+        ? `${error.message} The product change was reverted.`
+        : 'Catalog save failed. The product change was reverted.');
+    });
+    void save.catch(() => undefined);
+  }, [cacheEdits, persistCatalog]);
+
   const updateDeletedProducts = useCallback((id: string, deleted: boolean) => {
-    if (!BASE_PRODUCTS.some((product) => product.id === id)) return;
-    const ids = new Set(edits.deletedProductIds || []);
-    if (deleted) ids.add(id);
-    else ids.delete(id);
-    const next = { ...edits, deletedProductIds: [...ids] };
-    commitLocalEdits(next);
-    queueCatalogSave(next);
-  }, [commitLocalEdits, edits, queueCatalogSave]);
+    if (!isAdminAuthenticated || !isEditMode || !BASE_PRODUCTS.some((product) => product.id === id)) return;
+    setServerHasEdits(true);
+    setEdits((current) => {
+      const ids = new Set(current.deletedProductIds || []);
+      if (deleted) ids.add(id);
+      else ids.delete(id);
+      const normalized = clone({ ...current, deletedProductIds: [...ids] });
+      editsRef.current = normalized;
+      applyEditsToCatalog(normalized);
+      cacheEdits(normalized);
+      return normalized;
+    });
+    setRevision((current) => current + 1);
+    queueDeletedProductSave(id, deleted);
+  }, [cacheEdits, isAdminAuthenticated, isEditMode, queueDeletedProductSave]);
   const deleteProduct = useCallback((id: string) => updateDeletedProducts(id, true), [updateDeletedProducts]);
   const restoreProduct = useCallback((id: string) => updateDeletedProducts(id, false), [updateDeletedProducts]);
 
@@ -395,6 +446,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       } catch {
         migrationStarted.current = false;
+        window.alert('Catalog migration failed. Please try saving again.');
       }
     };
     void migrate();
