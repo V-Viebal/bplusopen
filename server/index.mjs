@@ -17,6 +17,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'bopen2026';
 const EMPTY_CATALOG = {
   collections: {},
   products: {},
+  addedProducts: [],
   images: {},
   content: {},
   deletedProductIds: [],
@@ -37,11 +38,20 @@ let catalogWriteQueue = Promise.resolve();
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const isValidProduct = (value) => isRecord(value)
+  && typeof value.id === 'string'
+  && typeof value.name === 'string'
+  && typeof value.collection === 'string'
+  && typeof value.imageUrl === 'string';
+
 const normalizeCatalog = (value) => {
   if (!isRecord(value)) return { ...EMPTY_CATALOG };
   return {
     collections: isRecord(value.collections) ? value.collections : {},
     products: isRecord(value.products) ? value.products : {},
+    addedProducts: Array.isArray(value.addedProducts)
+      ? value.addedProducts.filter(isValidProduct)
+      : [],
     images: isRecord(value.images) ? value.images : {},
     content: isRecord(value.content) ? value.content : {},
     deletedProductIds: Array.isArray(value.deletedProductIds)

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -9,6 +9,7 @@ import {
   LogOut,
   Package,
   Pencil,
+  Plus,
   RotateCcw,
   Save,
   ShieldCheck,
@@ -25,6 +26,38 @@ interface AdminPageProps {
 }
 
 type EditorTab = 'collections' | 'products';
+
+type NewProductDraft = {
+  name: string;
+  nameVi: string;
+  sku: string;
+  collection: string;
+  category: Product['category'];
+  material: Product['material'];
+  description: string;
+  descriptionVi: string;
+  imageUrl: string;
+  lifestyleImageUrl: string;
+  width: string;
+  depth: string;
+  height: string;
+};
+
+const newProductDraft = (collection = ''): NewProductDraft => ({
+  name: '',
+  nameVi: '',
+  sku: '',
+  collection,
+  category: 'dining',
+  material: 'Powder-coated aluminum',
+  description: '',
+  descriptionVi: '',
+  imageUrl: '',
+  lifestyleImageUrl: '',
+  width: '',
+  depth: '',
+  height: '',
+});
 
 const cloneEdits = (edits: CatalogEdits): CatalogEdits =>
   JSON.parse(JSON.stringify(edits)) as CatalogEdits;
@@ -85,9 +118,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     setEditMode,
     logout,
     saveEdits,
+    addProduct,
     resetEdits,
     deleteProduct,
     restoreProduct,
+    uploadImage,
   } = useCatalogData();
 
   const [activeTab, setActiveTab] = useState<EditorTab>('collections');
@@ -96,6 +131,85 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
   const [productFilter, setProductFilter] = useState('all');
   const [draftEdits, setDraftEdits] = useState<CatalogEdits>(() => cloneEdits(edits));
   const [saveMessage, setSaveMessage] = useState('');
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState<NewProductDraft>(() => newProductDraft(collections[0]?.id));
+  const [createError, setCreateError] = useState('');
+
+  const setNewProductField = <K extends keyof NewProductDraft>(field: K, value: NewProductDraft[K]) => {
+    setNewProduct((previous) => ({ ...previous, [field]: value }));
+    setCreateError('');
+  };
+
+  const handleNewImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 3 * 1024 * 1024) {
+      setCreateError(isVi ? 'Chọn ảnh dưới 3 MB.' : 'Choose an image under 3 MB.');
+      event.target.value = '';
+      return;
+    }
+    try {
+      const url = await uploadImage(file);
+      setNewProductField('imageUrl', url);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : (isVi ? 'Không tải được hình ảnh.' : 'Could not upload the image.'));
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleCreateProduct = () => {
+    if (!isAdminAuthenticated || !isEditMode) return;
+    const name = newProduct.name.trim();
+    const sku = newProduct.sku.trim();
+    const collection = collections.find((item) => item.id === newProduct.collection);
+    if (!name || !sku || !collection || !newProduct.imageUrl.trim() || newProduct.imageUrl.startsWith('data:')) {
+      setCreateError(isVi ? 'Vui lòng nhập tên, SKU, bộ sưu tập và tải hình ảnh lên.' : 'Enter a name, SKU, collection and upload an image.');
+      return;
+    }
+    if (products.some((item) => item.sku.toLowerCase() === sku.toLowerCase()) ||
+        (edits.addedProducts || []).some((item) => item.sku.toLowerCase() === sku.toLowerCase())) {
+      setCreateError(isVi ? 'SKU đã tồn tại.' : 'This SKU already exists.');
+      return;
+    }
+    const id = `custom-${crypto.randomUUID()}`;
+    const product: Product = {
+      id,
+      name,
+      nameVi: newProduct.nameVi.trim() || name,
+      sku,
+      collection: collection.id,
+      category: newProduct.category,
+      material: newProduct.material,
+      materialVi: newProduct.material,
+      description: newProduct.description.trim() || name,
+      descriptionVi: newProduct.descriptionVi.trim() || newProduct.description.trim() || name,
+      imageUrl: newProduct.imageUrl.trim(),
+      lifestyleImageUrl: newProduct.lifestyleImageUrl.trim() || newProduct.imageUrl.trim(),
+      secondaryImages: [],
+      features: [],
+      featuresVi: [],
+      dimensions: {
+        width: newProduct.width.trim(),
+        depth: newProduct.depth.trim(),
+        height: newProduct.height.trim(),
+      },
+      cadAvailable: false,
+      inStock: true,
+    };
+    const nextEdits = cloneEdits({ ...edits, addedProducts: [...(edits.addedProducts || []), product] });
+    if (!addProduct(product)) {
+      setCreateError(isVi ? 'Không lưu được sản phẩm.' : 'Could not save the product.');
+      return;
+    }
+    setDraftEdits(nextEdits);
+    setProductFilter(collection.id);
+    setSelectedProductId(id);
+    setNewProduct(newProductDraft(collection.id));
+    setIsAddingProduct(false);
+    setCreateError('');
+    setSaveMessage(isVi ? `Đã thêm sản phẩm "${name}".` : `Added "${name}".`);
+  };
 
   useEffect(() => {
     setDraftEdits(cloneEdits(edits));
@@ -327,7 +441,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
             },
             {
               label: isVi ? 'Đã chỉnh sửa' : 'Edited records',
-              value: Object.keys(edits.collections).length + Object.keys(edits.products).length + Object.keys(edits.images || {}).length + (edits.deletedProductIds || []).length,
+              value: Object.keys(edits.collections).length + Object.keys(edits.products).length + (edits.addedProducts || []).length + Object.keys(edits.images || {}).length + (edits.deletedProductIds || []).length,
               icon: Pencil,
             },
             {
@@ -496,6 +610,74 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
 
         {activeTab === 'products' && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            {isEditMode && (
+              <section className="rounded-xs border border-[#DED9CD] bg-white p-4 shadow-xs lg:col-span-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingProduct((previous) => !previous);
+                    setCreateError('');
+                  }}
+                  aria-expanded={isAddingProduct}
+                  className="inline-flex items-center gap-2 rounded-xs bg-[#9B522E] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#7F4024]"
+                >
+                  <Plus className="h-4 w-4" />
+                  {isVi ? 'Thêm sản phẩm mới' : 'Add new product'}
+                </button>
+                {isAddingProduct && (
+                  <div className="mt-5 space-y-5 border-t border-[#EAE3DA] pt-5">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <AdminField label={isVi ? 'Tên sản phẩm (EN) *' : 'Product name (EN) *'} value={newProduct.name} disabled={false} onChange={(value) => setNewProductField('name', value)} />
+                      <AdminField label={isVi ? 'Tên sản phẩm (VI)' : 'Product name (VI)'} value={newProduct.nameVi} disabled={false} onChange={(value) => setNewProductField('nameVi', value)} />
+                      <AdminField label="SKU *" value={newProduct.sku} disabled={false} onChange={(value) => setNewProductField('sku', value)} />
+                      <label>
+                        <span className={labelClass}>{isVi ? 'Bộ sưu tập *' : 'Collection *'}</span>
+                        <select className={inputClass} value={newProduct.collection} onChange={(event) => setNewProductField('collection', event.target.value)}>
+                          <option value="">{isVi ? 'Chọn bộ sưu tập' : 'Choose collection'}</option>
+                          {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span className={labelClass}>{isVi ? 'Danh mục' : 'Category'}</span>
+                        <select className={inputClass} value={newProduct.category} onChange={(event) => setNewProductField('category', event.target.value as Product['category'])}>
+                          {(['dining', 'deep-seating', 'chaises', 'tables', 'accessories'] as const).map((category) =>
+                            <option key={category} value={category}>{category}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span className={labelClass}>{isVi ? 'Chất liệu' : 'Material'}</span>
+                        <select className={inputClass} value={newProduct.material} onChange={(event) => setNewProductField('material', event.target.value as Product['material'])}>
+                          {(['100% FSC Ipe', 'Ipe & Woven Viro', 'Ipe & Aluminum', 'Powder-coated aluminum & woven cord', 'Powder-coated steel & teak', 'Molded FRP composite', 'Powder-coated aluminum'] as const).map((material) =>
+                            <option key={material} value={material}>{material}</option>)}
+                        </select>
+                      </label>
+                      <AdminField label={isVi ? 'Mô tả (EN)' : 'Description (EN)'} value={newProduct.description} disabled={false} multiline onChange={(value) => setNewProductField('description', value)} />
+                      <AdminField label={isVi ? 'Mô tả (VI)' : 'Description (VI)'} value={newProduct.descriptionVi} disabled={false} multiline onChange={(value) => setNewProductField('descriptionVi', value)} />
+                      <AdminField label={isVi ? 'Đường dẫn hình phối cảnh' : 'Lifestyle image URL'} value={newProduct.lifestyleImageUrl} disabled={false} onChange={(value) => setNewProductField('lifestyleImageUrl', value)} />
+                      <AdminField label={isVi ? 'Chiều rộng (mm)' : 'Width (mm)'} value={newProduct.width} disabled={false} onChange={(value) => setNewProductField('width', value)} />
+                      <AdminField label={isVi ? 'Chiều sâu (mm)' : 'Depth (mm)'} value={newProduct.depth} disabled={false} onChange={(value) => setNewProductField('depth', value)} />
+                      <AdminField label={isVi ? 'Chiều cao (mm)' : 'Height (mm)'} value={newProduct.height} disabled={false} onChange={(value) => setNewProductField('height', value)} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="cursor-pointer rounded-xs border border-[#C7A58F] px-4 py-2.5 text-xs font-semibold text-[#5C3822] hover:bg-[#FAF7F2]">
+                        {isVi ? 'Tải hình chính (dưới 3 MB)' : 'Upload main image (under 3 MB)'}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleNewImageFile} />
+                      </label>
+                      {newProduct.imageUrl && <img src={newProduct.imageUrl} alt="" className="h-24 w-32 rounded-xs border border-[#DED9CD] object-contain" />}
+                    </div>
+                    {createError && <p role="alert" className="text-sm text-red-700">{createError}</p>}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={handleCreateProduct} className="rounded-xs bg-[#287A3D] px-5 py-2.5 text-xs font-bold uppercase text-white hover:bg-[#1F6331]">
+                        {isVi ? 'Lưu sản phẩm mới' : 'Save new product'}
+                      </button>
+                      <button type="button" onClick={() => setIsAddingProduct(false)} className="rounded-xs border border-[#DED9CD] px-4 py-2.5 text-xs font-semibold">
+                        {isVi ? 'Hủy' : 'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
             <aside className="rounded-xs border border-[#DED9CD] bg-white p-3 shadow-xs">
               <label className="mb-4 block px-2">
                 <span className={labelClass}>{isVi ? 'Lọc theo collection' : 'Filter by collection'}</span>
