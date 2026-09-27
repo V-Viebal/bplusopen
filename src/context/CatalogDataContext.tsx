@@ -33,6 +33,7 @@ type CatalogDataContextValue = {
   revision: number;
   isAdminAuthenticated: boolean;
   isEditMode: boolean;
+  isCatalogLoaded: boolean;
   login: (username: string, password: string) => boolean;
   logout: () => void;
   setEditMode: (enabled: boolean) => void;
@@ -613,6 +614,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       revision,
       isAdminAuthenticated,
       isEditMode,
+      isCatalogLoaded: serverCatalogStatus !== 'loading',
       login,
       logout,
       setEditMode,
@@ -630,7 +632,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       resetEdits,
       uploadImage,
     }),
-    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, addCollection, deleteCollection, addProduct, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits, uploadImage],
+    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, serverCatalogStatus, login, logout, setEditMode, saveEdits, addCollection, deleteCollection, addProduct, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits, uploadImage],
   );
 
   return <CatalogDataContext.Provider value={value}>{children}</CatalogDataContext.Provider>;

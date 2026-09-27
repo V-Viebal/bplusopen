@@ -118,6 +118,7 @@ export default function App() {
   const {
     collections: catalogCollections,
     products: catalogProducts,
+    isCatalogLoaded,
     isAdminAuthenticated,
     isEditMode,
     setEditMode,
@@ -136,12 +137,12 @@ export default function App() {
   }, [activeProductModal, catalogProducts, currentPage, selectedProductId]);
 
   useEffect(() => {
-    if (currentPage === 'collection-detail' && !catalogCollections.some((collection) => collection.id === selectedCollection)) {
+    if (isCatalogLoaded && currentPage === 'collection-detail' && !catalogCollections.some((collection) => collection.id === selectedCollection)) {
       setSelectedCollection('all');
       setCurrentPage('collections');
       window.location.hash = 'collections';
     }
-  }, [catalogCollections, currentPage, selectedCollection]);
+  }, [catalogCollections, currentPage, isCatalogLoaded, selectedCollection]);
 
   // Handle URL hash changes (browser back/forward navigation)
   useEffect(() => {
