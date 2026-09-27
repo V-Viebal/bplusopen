@@ -116,6 +116,7 @@ export default function App() {
   const [menuDrawerInitialScreen, setMenuDrawerInitialScreen] = useState<MenuScreen>('root');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const {
+    collections: catalogCollections,
     products: catalogProducts,
     isAdminAuthenticated,
     isEditMode,
@@ -133,6 +134,14 @@ export default function App() {
       window.location.hash = 'furniture';
     }
   }, [activeProductModal, catalogProducts, currentPage, selectedProductId]);
+
+  useEffect(() => {
+    if (currentPage === 'collection-detail' && !catalogCollections.some((collection) => collection.id === selectedCollection)) {
+      setSelectedCollection('all');
+      setCurrentPage('collections');
+      window.location.hash = 'collections';
+    }
+  }, [catalogCollections, currentPage, selectedCollection]);
 
   // Handle URL hash changes (browser back/forward navigation)
   useEffect(() => {

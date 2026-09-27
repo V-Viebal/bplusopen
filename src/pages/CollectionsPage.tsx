@@ -31,9 +31,11 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
     initialCollection !== 'all' ? initialCollection : 'all'
   );
 
-  const displayedCollections = activeColId === 'all'
+  const selectedCollectionExists = collections.some((collection) => collection.id === activeColId);
+  const currentCollectionId = selectedCollectionExists ? activeColId : 'all';
+  const displayedCollections = currentCollectionId === 'all'
     ? collections
-    : collections.filter((c) => c.id === activeColId);
+    : collections.filter((collection) => collection.id === currentCollectionId);
 
   return (
     <div className="space-y-0 animate-in fade-in duration-300">
@@ -57,12 +59,12 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
             <button
               onClick={() => setActiveColId('all')}
               className={`px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
-                activeColId === 'all'
+                currentCollectionId === 'all'
                   ? 'bg-[#5C3822] text-white shadow-xs'
                   : 'bg-[#FAF7F2] text-[#6B5E52] hover:bg-[#EAE4D9] hover:text-[#2A1D15]'
               }`}
             >
-              {isVi ? 'Tất Cả Bộ Sưu Tập (4)' : 'All Collections (4)'}
+              {isVi ? `Tất Cả Bộ Sưu Tập (${collections.length})` : `All Collections (${collections.length})`}
             </button>
             {collections.map((c) => {
               const displayName = isVi && c.nameVi ? c.nameVi : c.name;
@@ -71,7 +73,7 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
                   key={c.id}
                   onClick={() => setActiveColId(c.id)}
                   className={`px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
-                    activeColId === c.id
+                    currentCollectionId === c.id
                       ? 'bg-[#5C3822] text-white shadow-xs'
                       : 'bg-[#FAF7F2] text-[#6B5E52] hover:bg-[#EAE4D9] hover:text-[#2A1D15]'
                   }`}

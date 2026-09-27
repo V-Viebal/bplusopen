@@ -16,6 +16,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'bopen2026';
 
 const EMPTY_CATALOG = {
   collections: {},
+  addedCollections: [],
+  deletedCollectionIds: [],
   products: {},
   addedProducts: [],
   images: {},
@@ -48,6 +50,15 @@ const normalizeCatalog = (value) => {
   if (!isRecord(value)) return { ...EMPTY_CATALOG };
   return {
     collections: isRecord(value.collections) ? value.collections : {},
+    addedCollections: Array.isArray(value.addedCollections)
+      ? value.addedCollections.filter((collection) => isRecord(collection)
+        && typeof collection.id === 'string'
+        && typeof collection.name === 'string'
+        && typeof collection.heroImage === 'string')
+      : [],
+    deletedCollectionIds: Array.isArray(value.deletedCollectionIds)
+      ? value.deletedCollectionIds.filter((id) => typeof id === 'string')
+      : [],
     products: isRecord(value.products) ? value.products : {},
     addedProducts: Array.isArray(value.addedProducts)
       ? value.addedProducts.filter(isValidProduct)

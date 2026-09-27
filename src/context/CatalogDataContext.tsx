@@ -17,6 +17,8 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 export type CatalogEdits = {
   collections: Record<string, Partial<Collection>>;
+  addedCollections: Collection[];
+  deletedCollectionIds: string[];
   products: Record<string, Partial<Product>>;
   addedProducts: Product[];
   images: Record<string, string>;
@@ -35,6 +37,8 @@ type CatalogDataContextValue = {
   logout: () => void;
   setEditMode: (enabled: boolean) => void;
   saveEdits: (nextEdits: CatalogEdits) => void;
+  addCollection: (collection: Collection) => boolean;
+  deleteCollection: (id: string) => number | null;
   addProduct: (product: Product) => boolean;
   saveImageEdit: (originalSrc: string, replacementSrc: string) => void;
   removeImageEdit: (originalSrc: string) => void;
@@ -51,6 +55,8 @@ const CatalogDataContext = createContext<CatalogDataContextValue | undefined>(un
 
 const EMPTY_EDITS: CatalogEdits = {
   collections: {},
+  addedCollections: [],
+  deletedCollectionIds: [],
   products: {},
   addedProducts: [],
   images: {},
@@ -77,10 +83,43 @@ const isValidAddedProduct = (value: unknown): value is Product => {
     && typeof dimensions.width === 'string';
 };
 
+const isValidAddedCollection = (value: unknown): value is Collection => {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'string'
+    && typeof value.name === 'string'
+    && typeof value.tagline === 'string'
+    && typeof value.description === 'string'
+    && typeof value.designer === 'string'
+    && typeof value.primaryMaterial === 'string'
+    && typeof value.heroImage === 'string'
+    && typeof value.itemCount === 'number'
+    && Array.isArray(value.highlightSpecs);
+};
+
+const getCatalogCollections = (edits: CatalogEdits) => {
+  const deleted = new Set(edits.deletedCollectionIds || []);
+  const baseIds = new Set(BASE_COLLECTIONS.map((collection) => collection.id));
+  return [
+    ...clone(BASE_COLLECTIONS),
+    ...clone((edits.addedCollections || []).filter((collection) => !baseIds.has(collection.id))),
+  ].filter((collection) => !deleted.has(collection.id));
+};
+
 const getCatalogProducts = (edits: CatalogEdits) => [
   ...clone(BASE_PRODUCTS),
   ...clone(edits.addedProducts || []),
 ];
+
+const getEffectiveCatalogProducts = (edits: CatalogEdits) => {
+  const products = getCatalogProducts(edits);
+  Object.entries(edits.products || {}).forEach(([id, patch]) => {
+    const product = products.find((item) => item.id === id);
+    if (product) Object.assign(product, clone(patch));
+  });
+  const deleted = new Set(edits.deletedProductIds || []);
+  const availableCollections = new Set(getCatalogCollections(edits).map((collection) => collection.id));
+  return products.filter((product) => !deleted.has(product.id) && availableCollections.has(product.collection));
+};
 
 const readStoredEdits = (): CatalogEdits => {
   if (typeof window === 'undefined') return clone(EMPTY_EDITS);
@@ -91,6 +130,12 @@ const readStoredEdits = (): CatalogEdits => {
     const parsed = JSON.parse(raw) as Partial<CatalogEdits>;
     return {
       collections: parsed.collections && typeof parsed.collections === 'object' ? parsed.collections : {},
+      addedCollections: Array.isArray(parsed.addedCollections)
+        ? parsed.addedCollections.filter(isValidAddedCollection)
+        : [],
+      deletedCollectionIds: Array.isArray(parsed.deletedCollectionIds)
+        ? parsed.deletedCollectionIds.filter((id): id is string => typeof id === 'string')
+        : [],
       products: parsed.products && typeof parsed.products === 'object' ? parsed.products : {},
       addedProducts: Array.isArray(parsed.addedProducts)
         ? parsed.addedProducts.filter(isValidAddedProduct)
@@ -108,7 +153,7 @@ const readStoredEdits = (): CatalogEdits => {
 
 const applyEditsToCatalog = (edits: CatalogEdits) => {
   // Restore the source data first so reset and edits from another tab are deterministic.
-  COLLECTIONS.splice(0, COLLECTIONS.length, ...clone(BASE_COLLECTIONS));
+  COLLECTIONS.splice(0, COLLECTIONS.length, ...getCatalogCollections(edits));
   PRODUCTS.splice(0, PRODUCTS.length, ...getCatalogProducts(edits));
 
   Object.entries(edits.collections).forEach(([id, patch]) => {
@@ -121,11 +166,13 @@ const applyEditsToCatalog = (edits: CatalogEdits) => {
     if (product) Object.assign(product, clone(patch));
   });
   const deleted = new Set(edits.deletedProductIds || []);
-  PRODUCTS.splice(0, PRODUCTS.length, ...PRODUCTS.filter((product) => !deleted.has(product.id)));
+  const availableCollections = new Set(COLLECTIONS.map((collection) => collection.id));
+  PRODUCTS.splice(0, PRODUCTS.length, ...PRODUCTS.filter((product) =>
+    !deleted.has(product.id) && availableCollections.has(product.collection)));
 };
 
 const buildEffectiveCatalog = (edits: CatalogEdits) => {
-  const collections = clone(BASE_COLLECTIONS);
+  const collections = getCatalogCollections(edits);
   const products = getCatalogProducts(edits);
 
   Object.entries(edits.collections).forEach(([id, patch]) => {
@@ -139,7 +186,11 @@ const buildEffectiveCatalog = (edits: CatalogEdits) => {
   });
 
   const deleted = new Set(edits.deletedProductIds || []);
-  return { collections, products: products.filter((product) => !deleted.has(product.id)) };
+  const availableCollections = new Set(collections.map((collection) => collection.id));
+  return {
+    collections,
+    products: products.filter((product) => !deleted.has(product.id) && availableCollections.has(product.collection)),
+  };
 };
 
 const readAdminSession = () => {
@@ -166,6 +217,8 @@ const getAdminAuthorization = () => {
 
 const hasEdits = (value: CatalogEdits) =>
   Object.keys(value.collections).length > 0
+  || (value.addedCollections || []).length > 0
+  || (value.deletedCollectionIds || []).length > 0
   || Object.keys(value.products).length > 0
   || value.addedProducts.length > 0
   || Object.keys(value.images).length > 0
@@ -336,6 +389,49 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return true;
   }, [commitLocalEdits, edits, isAdminAuthenticated, isEditMode, products, queueCatalogSave]);
 
+  const addCollection = useCallback((collection: Collection): boolean => {
+    if (!isAdminAuthenticated || !isEditMode || !isValidAddedCollection(collection)
+        || BASE_COLLECTIONS.some((item) => item.id === collection.id)
+        || collections.some((item) => item.id === collection.id)) {
+      return false;
+    }
+
+    const next = clone({
+      ...editsRef.current,
+      addedCollections: [
+        ...(editsRef.current.addedCollections || []).filter((item) => item.id !== collection.id),
+        collection,
+      ],
+      deletedCollectionIds: (editsRef.current.deletedCollectionIds || []).filter((id) => id !== collection.id),
+    });
+    commitLocalEdits(next);
+    queueCatalogSave(next);
+    return true;
+  }, [collections, commitLocalEdits, isAdminAuthenticated, isEditMode, queueCatalogSave]);
+
+  const deleteCollection = useCallback((id: string): number | null => {
+    if (!isAdminAuthenticated || !isEditMode || !collections.some((item) => item.id === id)) return null;
+
+    const current = editsRef.current;
+    const attachedProducts = getEffectiveCatalogProducts(current)
+      .filter((product) => product.collection === id);
+    const next = clone({
+      ...current,
+      addedCollections: (current.addedCollections || []).filter((collection) => collection.id !== id),
+      collections: Object.fromEntries(Object.entries(current.collections).filter(([collectionId]) => collectionId !== id)),
+      deletedCollectionIds: BASE_COLLECTIONS.some((collection) => collection.id === id)
+        ? [...new Set([...(current.deletedCollectionIds || []), id])]
+        : (current.deletedCollectionIds || []).filter((collectionId) => collectionId !== id),
+      deletedProductIds: [...new Set([
+        ...(current.deletedProductIds || []),
+        ...attachedProducts.map((product) => product.id),
+      ])],
+    });
+    commitLocalEdits(next);
+    queueCatalogSave(next);
+    return attachedProducts.length;
+  }, [collections, commitLocalEdits, isAdminAuthenticated, isEditMode, queueCatalogSave]);
+
   const uploadImage = useCallback(async (file: File) => {
     if (file.size > MAX_UPLOAD_BYTES) throw new Error('File is too large. Choose an image under 5MB.');
     if (!file.type.startsWith('image/')) throw new Error('Only image files are accepted.');
@@ -456,6 +552,12 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (!active) return;
         const normalized: CatalogEdits = {
           collections: remote.collections && typeof remote.collections === 'object' ? remote.collections : {},
+          addedCollections: Array.isArray(remote.addedCollections)
+            ? remote.addedCollections.filter(isValidAddedCollection)
+            : [],
+          deletedCollectionIds: Array.isArray(remote.deletedCollectionIds)
+            ? remote.deletedCollectionIds.filter((id): id is string => typeof id === 'string')
+            : [],
           products: remote.products && typeof remote.products === 'object' ? remote.products : {},
           images: remote.images && typeof remote.images === 'object' ? remote.images : {},
           content: remote.content && typeof remote.content === 'object' ? remote.content : {},
@@ -515,6 +617,8 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       logout,
       setEditMode,
       saveEdits,
+      addCollection,
+      deleteCollection,
       addProduct,
       saveImageEdit,
       removeImageEdit,
@@ -526,7 +630,7 @@ export const CatalogDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
       resetEdits,
       uploadImage,
     }),
-    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, addProduct, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits, uploadImage],
+    [collections, products, edits, revision, isAdminAuthenticated, isEditMode, login, logout, setEditMode, saveEdits, addCollection, deleteCollection, addProduct, saveImageEdit, removeImageEdit, saveContentEdit, saveContentEdits, removeContentEdit, deleteProduct, restoreProduct, resetEdits, uploadImage],
   );
 
   return <CatalogDataContext.Provider value={value}>{children}</CatalogDataContext.Provider>;

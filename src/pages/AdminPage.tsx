@@ -118,6 +118,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     setEditMode,
     logout,
     saveEdits,
+    addCollection,
+    deleteCollection,
     addProduct,
     resetEdits,
     deleteProduct,
@@ -131,6 +133,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
   const [productFilter, setProductFilter] = useState('all');
   const [draftEdits, setDraftEdits] = useState<CatalogEdits>(() => cloneEdits(edits));
   const [saveMessage, setSaveMessage] = useState('');
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionNameVi, setNewCollectionNameVi] = useState('');
+  const [newCollectionId, setNewCollectionId] = useState('');
+  const [newCollectionHeroImage, setNewCollectionHeroImage] = useState('');
+  const [collectionError, setCollectionError] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProduct, setNewProduct] = useState<NewProductDraft>(() => newProductDraft(collections[0]?.id));
   const [createError, setCreateError] = useState('');
@@ -337,6 +345,64 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     setSaveMessage(isVi ? 'Đã xóa sản phẩm.' : 'Product removed.');
   };
 
+  const handleCreateCollection = () => {
+    if (!isAdminAuthenticated || !isEditMode) return;
+    const name = newCollectionName.trim();
+    const id = newCollectionId.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+    const heroImage = newCollectionHeroImage.trim();
+    if (!name || !id || !heroImage) {
+      setCollectionError(isVi ? 'Nhập tên, mã collection và URL ảnh đại diện.' : 'Enter a collection name, ID and hero image URL.');
+      return;
+    }
+    if (collections.some((item) => item.id.toLowerCase() === id)) {
+      setCollectionError(isVi ? 'Mã collection đã tồn tại.' : 'That collection ID already exists.');
+      return;
+    }
+    const collection: Collection = {
+      id,
+      name,
+      nameVi: newCollectionNameVi.trim() || name,
+      tagline: '',
+      taglineVi: '',
+      description: '',
+      descriptionVi: '',
+      designer: '',
+      primaryMaterial: '',
+      primaryMaterialVi: '',
+      heroImage,
+      itemCount: 0,
+      highlightSpecs: [],
+      highlightSpecsVi: [],
+    };
+    if (!addCollection(collection)) {
+      setCollectionError(isVi ? 'Không lưu được collection.' : 'Could not save the collection.');
+      return;
+    }
+    setSelectedCollectionId(id);
+    setNewCollectionName('');
+    setNewCollectionNameVi('');
+    setNewCollectionId('');
+    setNewCollectionHeroImage('');
+    setIsAddingCollection(false);
+    setCollectionError('');
+    setSaveMessage(isVi ? `Đã thêm collection "${name}".` : `Added collection "${name}".`);
+  };
+
+  const handleDeleteCollection = () => {
+    if (!isEditMode || !selectedCollection) return;
+    const confirmed = window.confirm(
+      isVi
+        ? `Xóa collection "${selectedCollection.name}" và toàn bộ sản phẩm thuộc collection này khỏi website?`
+        : `Remove "${selectedCollection.name}" and all products in this collection from the website?`,
+    );
+    if (!confirmed) return;
+    const deletedProducts = deleteCollection(selectedCollection.id);
+    if (deletedProducts === null) return;
+    setSaveMessage(isVi
+      ? `Đã xóa collection và ${deletedProducts} sản phẩm liên quan.`
+      : `Collection removed with ${deletedProducts} attached products.`);
+  };
+
   if (!isAdminAuthenticated) {
     return (
       <div data-admin-ui className="min-h-[calc(100vh-184px)] bg-[#F8F6F2] px-4 py-12 sm:px-6 lg:px-8">
@@ -441,7 +507,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
             },
             {
               label: isVi ? 'Đã chỉnh sửa' : 'Edited records',
-              value: Object.keys(edits.collections).length + Object.keys(edits.products).length + (edits.addedProducts || []).length + Object.keys(edits.images || {}).length + (edits.deletedProductIds || []).length,
+              value: Object.keys(edits.collections).length + (edits.addedCollections || []).length + (edits.deletedCollectionIds || []).length + Object.keys(edits.products).length + (edits.addedProducts || []).length + Object.keys(edits.images || {}).length + (edits.deletedProductIds || []).length,
               icon: Pencil,
             },
             {
@@ -534,6 +600,35 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                 </span>
                 <span className="text-[10px] font-mono text-[#9A8D80]">{collections.length}</span>
               </div>
+              {isEditMode && (
+                <div className="mb-3 border-b border-[#EAE3DA] px-2 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCollection((previous) => !previous);
+                      setCollectionError('');
+                    }}
+                    aria-expanded={isAddingCollection}
+                    className="inline-flex items-center gap-2 rounded-xs bg-[#9B522E] px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-[#7F4024]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {isVi ? 'Thêm collection' : 'Add collection'}
+                  </button>
+                  {isAddingCollection && (
+                    <div className="mt-3 space-y-3">
+                      <AdminField label={isVi ? 'Mã collection *' : 'Collection ID *'} value={newCollectionId} disabled={false} hint={isVi ? 'Dùng chữ thường, số và dấu gạch ngang.' : 'Use lowercase letters, numbers and hyphens.'} onChange={(value) => { setNewCollectionId(value); setCollectionError(''); }} />
+                      <AdminField label={isVi ? 'Tên (EN) *' : 'Name (EN) *'} value={newCollectionName} disabled={false} onChange={(value) => { setNewCollectionName(value); setCollectionError(''); }} />
+                      <AdminField label={isVi ? 'Tên (VI)' : 'Name (VI)'} value={newCollectionNameVi} disabled={false} onChange={(value) => { setNewCollectionNameVi(value); setCollectionError(''); }} />
+                      <AdminField label={isVi ? 'URL ảnh đại diện *' : 'Hero image URL *'} value={newCollectionHeroImage} disabled={false} hint={isVi ? 'Đường dẫn ảnh hợp lệ hoặc URL https.' : 'Use a valid local image path or HTTPS URL.'} onChange={(value) => { setNewCollectionHeroImage(value); setCollectionError(''); }} />
+                      {collectionError && <p role="alert" className="text-xs text-red-700">{collectionError}</p>}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={handleCreateCollection} className="rounded-xs bg-[#287A3D] px-3 py-2 text-[11px] font-bold uppercase text-white hover:bg-[#1F6331]">{isVi ? 'Tạo' : 'Create'}</button>
+                        <button type="button" onClick={() => setIsAddingCollection(false)} className="rounded-xs border border-[#DED9CD] px-3 py-2 text-[11px] font-semibold">{isVi ? 'Hủy' : 'Cancel'}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="space-y-1">
                 {collections.map((collection) => {
                   const active = collection.id === selectedCollectionId;
@@ -603,6 +698,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                       : 'The preview uses the current Hero image URL. Save to update the image everywhere this collection appears.'}
                   </div>
                 </div>
+                {isEditMode && (
+                  <div className="border-t border-[#EAE3DA] pt-5">
+                    <button
+                      type="button"
+                      onClick={handleDeleteCollection}
+                      className="inline-flex items-center gap-2 rounded-xs border border-red-300 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isVi ? 'Xóa collection và sản phẩm liên quan' : 'Delete collection and attached products'}
+                    </button>
+                  </div>
+                )}
               </section>
             )}
           </div>
