@@ -388,15 +388,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
     setSaveMessage(isVi ? `Đã thêm collection "${name}".` : `Added collection "${name}".`);
   };
 
-  const handleDeleteCollection = () => {
-    if (!isEditMode || !selectedCollection) return;
+  const handleDeleteCollection = (collection: Collection) => {
+    if (!isAdminAuthenticated || !isEditMode) return;
     const confirmed = window.confirm(
       isVi
-        ? `Xóa collection "${selectedCollection.name}" và toàn bộ sản phẩm thuộc collection này khỏi website?`
-        : `Remove "${selectedCollection.name}" and all products in this collection from the website?`,
+        ? `Xóa collection "${collection.name}" và toàn bộ sản phẩm thuộc collection này khỏi website?`
+        : `Remove "${collection.name}" and all products in this collection from the website?`,
     );
     if (!confirmed) return;
-    const deletedProducts = deleteCollection(selectedCollection.id);
+    const deletedProducts = deleteCollection(collection.id);
     if (deletedProducts === null) return;
     setSaveMessage(isVi
       ? `Đã xóa collection và ${deletedProducts} sản phẩm liên quan.`
@@ -600,6 +600,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                 </span>
                 <span className="text-[10px] font-mono text-[#9A8D80]">{collections.length}</span>
               </div>
+              {!isEditMode && (
+                <p className="mb-3 px-2 text-xs text-[#6B5E52]">
+                  {isVi ? 'Bật chế độ Edit ở trên để thêm hoặc xóa collection.' : 'Enable Edit mode above to add or delete collections.'}
+                </p>
+              )}
               {isEditMode && (
                 <div className="mb-3 border-b border-[#EAE3DA] px-2 pb-3">
                   <button
@@ -633,22 +638,35 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                 {collections.map((collection) => {
                   const active = collection.id === selectedCollectionId;
                   return (
-                    <button
-                      type="button"
-                      key={collection.id}
-                      onClick={() => setSelectedCollectionId(collection.id)}
-                      className={`flex w-full items-center justify-between rounded-xs px-3 py-3 text-left transition-colors ${
-                        active ? 'bg-[#1C1A17] text-white' : 'text-[#4F463F] hover:bg-[#F2EDE5]'
-                      }`}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{collection.name}</span>
-                        <span className={`mt-0.5 block text-[10px] uppercase tracking-wider ${active ? 'text-white/55' : 'text-[#9A8D80]'}`}>
-                          {collection.id}
+                    <div key={collection.id} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setSelectedCollectionId(collection.id)}
+                        className={`flex min-w-0 flex-1 items-center justify-between rounded-xs px-3 py-3 text-left transition-colors ${
+                          active ? 'bg-[#1C1A17] text-white' : 'text-[#4F463F] hover:bg-[#F2EDE5]'
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{collection.name}</span>
+                          <span className={`mt-0.5 block text-[10px] uppercase tracking-wider ${active ? 'text-white/55' : 'text-[#9A8D80]'}`}>
+                            {collection.id}
+                          </span>
                         </span>
-                      </span>
-                      {active && <Check className="h-4 w-4 shrink-0 text-[#C28B75]" />}
-                    </button>
+                        {active && <Check className="h-4 w-4 shrink-0 text-[#C28B75]" />}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!isEditMode}
+                        onClick={() => handleDeleteCollection(collection)}
+                        aria-label={isVi ? `Xóa collection ${collection.name}` : `Delete collection ${collection.name}`}
+                        title={!isEditMode ? (isVi ? 'Bật chế độ Edit để xóa collection' : 'Enable Edit mode to delete a collection') : undefined}
+                        className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-xs border border-red-300 px-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {isVi ? 'Xóa' : 'Delete'}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -702,7 +720,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenLogin })
                   <div className="border-t border-[#EAE3DA] pt-5">
                     <button
                       type="button"
-                      onClick={handleDeleteCollection}
+                      onClick={() => handleDeleteCollection(selectedCollection)}
                       className="inline-flex items-center gap-2 rounded-xs border border-red-300 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
