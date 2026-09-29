@@ -20,6 +20,8 @@ import { InlineEditableText } from '../components/InlineEditableText';
 import { InlineEditableImage } from '../components/InlineEditableImage';
 import { COLLECTIONS as CATALOG_COLLECTIONS } from '../data/furnitureData';
 import { getCollectionCardName } from '../utils/collectionDisplay';
+import { useCatalogData } from '../context/CatalogDataContext';
+import { DeleteCollectionButton } from '../components/DeleteCollectionButton';
 
 interface HomePageProps {
   onNavigate: (page: PageId, extra?: { category?: string; collection?: string; productId?: string; tab?: string }) => void;
@@ -51,6 +53,7 @@ interface CategoryCardData {
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
   const isVi = language === 'vi';
+  const { collections } = useCatalogData();
 
   // Modals state
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -132,254 +135,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       });
     }
   };
-
-  // Featured collections, with the newly added catalog collections directly after LUMA.
-  const COLLECTIONS_LIST: CollectionCardData[] = [
-    {
-      id: 'luma',
-      name: 'LUMA',
-      nameVi: 'LUMA',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Natural teak, woven cord, and powder-coated metal for contemporary outdoor living.',
-      descriptionVi: 'Gỗ teak tự nhiên, dây đan và kim loại sơn tĩnh điện cho không gian ngoài trời đương đại.',
-      image: '/luma/scene-3.webp',
-      targetCollection: 'luma',
-    },
-    {
-      id: 'lumino',
-      name: 'LUMINO',
-      nameVi: 'LUMINO',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Clean, lightweight aluminum seating and dining for modern outdoor spaces.',
-      descriptionVi: 'Hệ sản phẩm nhôm gọn nhẹ cho không gian lounge và dining ngoài trời hiện đại.',
-      image: '/lumino-profile/scene-2.webp',
-      targetCollection: 'lumino',
-    },
-    {
-      id: 'bloom',
-      name: 'POLY BLOOM',
-      nameVi: 'POLY BLOOM',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Soft, rounded forms in durable molded composite for outdoor living.',
-      descriptionVi: 'Dáng cong mềm mại từ composite đúc bền bỉ cho không gian ngoài trời.',
-      image: '/poly-bloom/scene-2.webp',
-      targetCollection: 'bloom',
-    },
-    {
-      id: 'serenity',
-      name: 'SERENITY',
-      nameVi: 'SERENITY',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Clean, refined aluminum furniture for peaceful contemporary outdoor living.',
-      descriptionVi: 'Nội thất nhôm tinh gọn, thanh lịch cho không gian ngoài trời đương đại an yên.',
-      image: '/serenity/catalog-02.jpg',
-      targetCollection: 'serenity',
-    },
-    {
-      id: 'coral',
-      name: 'CORAL',
-      nameVi: 'CORAL',
-      badge: 'BEST SELLER',
-      badgeVi: 'BÁN CHẠY NHẤT',
-      description: 'Transitional woven Solara Fiber in your choice of cream or stone gray.',
-      descriptionVi: 'Sợi đan Solara Fiber chuyển tiếp trong lựa chọn màu kem hoặc xám đá.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/coral-hptall-2.jpg',
-      targetCollection: 'coral',
-    },
-    {
-      id: 'dana',
-      name: 'DANA',
-      nameVi: 'DANA',
-      description: 'The Dana teak dining chair–elegantly crafted, enduringly comfortable.',
-      descriptionVi: 'Ghế ăn gỗ teak Dana – chế tác trang nhã, êm ái bền bỉ qua năm tháng.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Dana-MidCenturyDiningwithTeslinWovenCordSeat-1080.jpg',
-      targetCollection: 'dana',
-    },
-    {
-      id: 'forte',
-      name: 'FORTE',
-      nameVi: 'FORTE',
-      description: 'Mid-century woven deep seating collection with Ipe wood accents.',
-      descriptionVi: 'Bộ sưu tập sofa sâu dệt thủ công giữa thế kỷ với điểm nhấn gỗ Ipe cao cấp.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/forte-hptall-1.jpg',
-      targetCollection: 'forte',
-    },
-    {
-      id: 'foundations',
-      name: 'FOUNDATIONS',
-      nameVi: 'FOUNDATIONS',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: "B+Open's unified table range in stunning FSC®-certified Ipe or Teak.",
-      descriptionVi: 'Hệ bàn đồng bộ từ B+Open với gỗ Ipe hoặc Teak chứng nhận 100% FSC®.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Foundations-MosaicConsole-1080.jpg',
-      targetCollection: 'foundations',
-    },
-    {
-      id: 'glow',
-      name: 'GLOW',
-      nameVi: 'GLOW',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'The look of Ipe in a brand new fire table offering from B+Open.',
-      descriptionVi: 'Bàn sưởi ấm lửa trại ngoài trời chế tác từ gỗ Ipe thượng hạng của B+Open.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2023/01/glow-tall-slider-2.jpg',
-      targetCollection: 'glow',
-    },
-    {
-      id: 'harmony',
-      name: 'HARMONY',
-      nameVi: 'HARMONY',
-      description: 'Contemporary styling meets the finest materials to elevate your outdoor decor.',
-      descriptionVi: 'Phong cách đương đại kết hợp cùng những vật liệu tinh tế nhất để nâng tầm cảnh quan.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/harmony-hptall-2.jpg',
-      targetCollection: 'harmony',
-    },
-    {
-      id: 'heritage',
-      name: 'HERITAGE',
-      nameVi: 'HERITAGE',
-      badge: 'BEST SELLER',
-      badgeVi: 'BÁN CHẠY NHẤT',
-      description: 'Formerly Classic Ipe, this collection has traditional cottage styling in Ipe.',
-      descriptionVi: 'Bộ sưu tập di sản với phong cách đồng quê Mỹ kinh điển từ gỗ Ipe nguyên khối.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/classic-ipe-hptall-1.jpg',
-      targetCollection: 'heritage',
-    },
-    {
-      id: 'inception',
-      name: 'INCEPTION',
-      nameVi: 'INCEPTION',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Teak and Solara fiber: inspired by mid-century, woven for this century.',
-      descriptionVi: 'Gỗ Teak và sợi Solara: cảm hứng giữa thế kỷ, đan dệt cho thế kỷ hiện đại.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Inception-LoungeChairswithBronzeSolaraWovenFramesandTeakAccents-1080.jpg',
-      targetCollection: 'inception',
-    },
-    {
-      id: 'innova',
-      name: 'INNOVA',
-      nameVi: 'INNOVA',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'Delightfully new, yet pleasingly familiar: Innova is modern Ipe comfort.',
-      descriptionVi: 'Mới mẻ đầy bất ngờ nhưng quen thuộc thanh lịch: Innova mang lại sự êm ái hiện đại.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Innova-TrellisModernLoungeChair-1080.jpg',
-      targetCollection: 'innova',
-    },
-    {
-      id: 'jett',
-      name: 'JETT',
-      nameVi: 'JETT',
-      description: 'Sleek styling places Jett firmly in the category of modern masterpieces.',
-      descriptionVi: 'Đường nét sắc sảo đưa Jett trở thành kiệt tác kiến trúc hiện đại hàng đầu.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/jett-hptall-1.jpg',
-      targetCollection: 'jett',
-    },
-    {
-      id: 'laguna',
-      name: 'LAGUNA',
-      nameVi: 'LAGUNA',
-      description: 'Craftsmanship blends with contemporary styling in FSC®-Certified Ipe.',
-      descriptionVi: 'Kỹ nghệ thủ công điêu luyện giao hòa phong cách đương đại trong gỗ Ipe FSC®.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Laguna-DiningArmChair.jpg',
-      targetCollection: 'laguna',
-    },
-    {
-      id: 'mix',
-      name: 'MIX',
-      nameVi: 'MIX',
-      description: 'Endulge in the luxury of choice with Mix Ipe sectional and deep seating.',
-      descriptionVi: 'Tự do bài trí với hệ sofa module ghép và ghế sâu thư giãn từ gỗ Ipe.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/mix-hptall-1.jpg',
-      targetCollection: 'mix',
-    },
-    {
-      id: 'nest',
-      name: 'NEST',
-      nameVi: 'NEST',
-      description: 'Retro cool with casual warmth, Nest envelops you in woven comfort.',
-      descriptionVi: 'Cá tính hoài niệm ấm áp, Nest ôm trọn bạn trong sự êm ái của sợi đan tự nhiên.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/nest-hptall-1.jpg',
-      targetCollection: 'nest',
-    },
-    {
-      id: 'opal',
-      name: 'OPAL',
-      nameVi: 'OPAL',
-      badge: 'BEST SELLER',
-      badgeVi: 'BÁN CHẠY NHẤT',
-      description: 'A B+Open jewel, the Opal collection dazzles in any landscape.',
-      descriptionVi: 'Viên ngọc quý của B+Open, bộ sưu tập Opal tỏa sáng kiêu hãnh trong mọi cảnh quan.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/opal-hptall-1.jpg',
-      targetCollection: 'opal',
-    },
-    {
-      id: 'plume-pillows',
-      name: 'PLUME PILLOWS',
-      nameVi: 'GỐI ĐỆM PLUME',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: 'The uncommon thread to unforgettable gatherings, Plume pillows.',
-      descriptionVi: 'Sợi chỉ dệt nên những cuộc hội ngộ khó quên, gối đệm ngoài trời Plume.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2025/01/Plume-WhitePillows-Lifestyle1-1080.jpg',
-      targetCollection: 'plume-pillows',
-    },
-    {
-      id: 'richmond',
-      name: 'RICHMOND',
-      nameVi: 'RICHMOND',
-      description: 'Keep your guests coming back with the relaxed elegance of Richmond.',
-      descriptionVi: 'Giữ chân những vị khách quý bằng sự tao nhã và thanh lịch trầm tĩnh của Richmond.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/richmond-hptall-1.jpg',
-      targetCollection: 'richmond',
-    },
-    {
-      id: 'savannah',
-      name: 'SAVANNAH',
-      nameVi: 'SAVANNAH',
-      description: 'The FSC®-certified teak Savannah collection is pure Americana.',
-      descriptionVi: 'Bộ sưu tập Savannah từ gỗ Teak chứng nhận FSC® mang đậm hơi thở di sản Mỹ.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2023/02/Savannah-SwivelRocker-1080x1350-1.jpg',
-      targetCollection: 'savannah',
-    },
-    {
-      id: 'sky',
-      name: 'SKY',
-      nameVi: 'SKY',
-      description: 'The Sky collection brings a fresh, tasteful allure to outdoor living in Ipe wood.',
-      descriptionVi: 'Bộ sưu tập Sky mang sức hút thanh tân đầy lôi cuốn đến không gian sống ngoài trời.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/sky-hptall-1.jpg',
-      targetCollection: 'sky',
-    },
-    {
-      id: 'sorrento',
-      name: 'SORRENTO',
-      nameVi: 'SORRENTO',
-      badge: 'BEST SELLER',
-      badgeVi: 'BÁN CHẠY NHẤT',
-      description: 'Palace-scale teak deep seating and dining with the Sorrento collection.',
-      descriptionVi: 'Sofa sâu và bàn ăn quy mô dinh thự chế tác từ gỗ Teak với bộ sưu tập Sorrento.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2022/01/sorrento-hptall-2.jpg',
-      targetCollection: 'sorrento',
-    },
-    {
-      id: 'tempo',
-      name: 'TEMPO',
-      nameVi: 'TEMPO',
-      badge: 'NEW',
-      badgeVi: 'MỚI',
-      description: '12 colorways of all-weather Ultraleather® now available.',
-      descriptionVi: '12 sắc màu da Ultraleather® chống chịu mọi thời tiết sẵn sàng cho không gian.',
-      image: 'https://www.jensenoutdoor.com/wp-content/uploads/2023/02/Tempo-SummitCreamLady-1080x1350-1.jpg',
-      targetCollection: 'tempo',
-    },
-  ];
 
   // 12 Authentic Categories matching official jensenoutdoor.com
   const CATEGORIES_LIST: CategoryCardData[] = [
@@ -550,96 +305,84 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           {/* Horizontal Scrolling Card Track */}
           <div
             ref={collectionsScrollRef}
-            className="flex items-stretch gap-4 sm:gap-6 overflow-x-auto scroll-smooth px-5 sm:px-14 pb-4 pt-1 no-scrollbar"
+            className={`flex items-stretch gap-4 sm:gap-6 overflow-x-auto scroll-smooth px-5 sm:px-14 pb-4 pt-1 no-scrollbar ${
+              collections.length <= 4 ? 'sm:justify-center' : ''
+            }`}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {COLLECTIONS_LIST.map((col) => (
-              <div
-                key={col.id}
-                onClick={() => onNavigate('collections', { collection: col.targetCollection })}
-                className="w-[250px] sm:w-[280px] lg:w-[295px] shrink-0 flex flex-col bg-[#F8F6F2] border border-[#DED9CD] rounded-xs overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-300"
-              >
-                {(() => {
-                  const catalogCollection = CATALOG_COLLECTIONS.find((item) => item.id === col.targetCollection);
-                  const cardName = getCollectionCardName(
-                    col.targetCollection,
-                    language,
-                    isVi ? col.nameVi : col.name,
-                  );
-                  const cardDescription = catalogCollection
-                    ? (isVi && catalogCollection.descriptionVi ? catalogCollection.descriptionVi : catalogCollection.description)
-                    : (isVi ? col.descriptionVi : col.description);
+            {collections.map((col) => {
+              const cardName = getCollectionCardName(
+                col.id,
+                language,
+                isVi && col.nameVi ? col.nameVi : col.name,
+              );
+              const cardDescription = isVi && col.descriptionVi
+                ? col.descriptionVi
+                : col.description || col.taglineVi || col.tagline || '';
 
-                  return (
-                    <>
-                <div className="relative aspect-[4/5] overflow-hidden bg-[#EAE4D9]">
-                  {catalogCollection ? (
+              return (
+                <div
+                  key={col.id}
+                  onClick={() => onNavigate('collections', { collection: col.id })}
+                  className="w-[260px] sm:w-[290px] lg:w-[310px] shrink-0 flex flex-col bg-[#F8F6F2] border border-[#DED9CD] rounded-xs overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-300 relative"
+                >
+                  <DeleteCollectionButton
+                    collection={col}
+                    variant="badge"
+                    className="absolute top-3 left-3 z-30"
+                  />
+                  <div className="relative aspect-[4/5] overflow-hidden bg-[#EAE4D9]">
                     <InlineEditableImage
                       record="collection"
-                      recordId={catalogCollection.id}
+                      recordId={col.id}
                       field="heroImage"
-                      value={catalogCollection.heroImage}
+                      value={col.heroImage}
                       alt={cardName}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
-                  ) : (
-                    <img
-                      src={col.image}
-                      alt={col.name}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                      loading="lazy"
-                    />
-                  )}
-                  {col.badge && (
                     <div className="absolute top-3 right-3 bg-[#1C1A17]/90 backdrop-blur-xs text-white text-[10.5px] uppercase font-bold tracking-wider px-3 py-1 rounded-xs shadow-sm">
-                      {isVi ? col.badgeVi : col.badge}
+                      {isVi ? 'MỚI' : 'NEW'}
                     </div>
-                  )}
-                </div>
+                    {col.itemCount > 0 && (
+                      <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-xs text-white/90 text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-xs">
+                        {col.itemCount} {isVi ? 'Thiết kế' : 'Designs'}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Card Info Box */}
-                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-sans text-[17px] sm:text-lg font-bold tracking-wider text-[#1C1A17] group-hover:text-[#9B522E] transition-colors uppercase">
-                      {catalogCollection ? (
+                  {/* Card Info Box */}
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-sans text-[17px] sm:text-lg font-bold tracking-wider text-[#1C1A17] group-hover:text-[#9B522E] transition-colors uppercase">
                         <InlineEditableText
                           record="collection"
-                          recordId={col.targetCollection}
+                          recordId={col.id}
                           field={isVi ? 'nameVi' : 'name'}
                           value={cardName}
                           as="span"
                           label={isVi ? 'Tên collection tiếng Việt' : 'Collection name'}
                         />
-                      ) : (
-                        cardName
-                      )}
-                    </h4>
-                    <p className="text-[13.5px] text-[#554C42] mt-1.5 leading-relaxed line-clamp-2">
-                      {catalogCollection ? (
+                      </h4>
+                      <p className="text-[13.5px] text-[#554C42] mt-1.5 leading-relaxed line-clamp-2">
                         <InlineEditableText
                           record="collection"
-                          recordId={col.targetCollection}
+                          recordId={col.id}
                           field={isVi ? 'descriptionVi' : 'description'}
                           value={cardDescription}
                           as="span"
                           multiline
                           label={isVi ? 'Mô tả collection tiếng Việt' : 'Collection description'}
                         />
-                      ) : (
-                        cardDescription
-                      )}
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-[#DED9CD] flex items-center justify-between text-[12.5px] font-bold text-[#9B522E] uppercase tracking-wider">
-                    <span>{isVi ? 'Xem chi tiết bộ sưu tập' : 'View collection'}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform stroke-[2]" />
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-[#DED9CD] flex items-center justify-between text-[12.5px] font-bold text-[#9B522E] uppercase tracking-wider">
+                      <span>{isVi ? 'Xem chi tiết bộ sưu tập' : 'View collection'}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform stroke-[2]" />
+                    </div>
                   </div>
                 </div>
-                    </>
-                  );
-                })()}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
