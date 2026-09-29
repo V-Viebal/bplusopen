@@ -7,6 +7,7 @@ import { formatDimensionsSummary } from '../utils/dimensionUtils';
 import { InlineEditableImage } from '../components/InlineEditableImage';
 import { InlineEditableText } from '../components/InlineEditableText';
 import { DeleteProductButton } from '../components/DeleteProductButton';
+import { DeleteCollectionButton } from '../components/DeleteCollectionButton';
 import { useCatalogData } from '../context/CatalogDataContext';
 
 interface CollectionsPageProps {
@@ -167,6 +168,7 @@ export const CollectionsPage: React.FC<CollectionsPageProps> = ({
                       >
                         <span>{isVi ? 'Lọc Danh Mục' : 'Filter Catalog'}</span>
                       </button>
+                      <DeleteCollectionButton collection={col} />
                       <button
                         onClick={() => col.id === 'luma' ? window.open('/luma/catalog-luma-2026.pdf', '_blank', 'noopener') : onNavigate('trade')}
                         className="text-xs font-semibold uppercase tracking-wider text-[#6B5E52] hover:text-[#1C1A17] underline underline-offset-4"

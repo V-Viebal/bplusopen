@@ -5,6 +5,7 @@ import { useCatalogData } from '../context/CatalogDataContext';
 import { InlineEditableText } from './InlineEditableText';
 import { InlineEditableImage } from './InlineEditableImage';
 import { getCollectionCardName } from '../utils/collectionDisplay';
+import { DeleteCollectionButton } from './DeleteCollectionButton';
 
 interface CollectionsGridProps {
   onSelectCollection: (collectionId: string) => void;
@@ -62,6 +63,7 @@ export const CollectionsGrid: React.FC<CollectionsGridProps> = ({ onSelectCollec
               >
                 {/* Collection Image */}
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#EAE4D9]">
+                  <DeleteCollectionButton collection={col} variant="badge" className="absolute top-4 right-4" />
                   <InlineEditableImage
                     record="collection"
                     recordId={col.id}
