@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import express from 'express';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const app = express();
 const PORT = Number(process.env.PORT || 80);
@@ -13,6 +14,31 @@ const DIST_DIR = path.join(process.cwd(), 'dist');
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'bopen2026';
+
+// S3 / MinIO Configuration
+const S3_ENDPOINT = process.env.S3_ENDPOINT || '';
+const S3_REGION = process.env.S3_REGION || 'us-east-1';
+const S3_BUCKET = process.env.S3_BUCKET || '';
+const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID || '';
+const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY || '';
+const S3_FORCE_PATH_STYLE = process.env.S3_FORCE_PATH_STYLE !== 'false';
+const S3_PUBLIC_URL_PREFIX = process.env.S3_PUBLIC_URL_PREFIX || '';
+
+const isS3Configured = Boolean(
+  S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY_ID && S3_SECRET_ACCESS_KEY,
+);
+
+const s3Client = isS3Configured
+  ? new S3Client({
+      endpoint: S3_ENDPOINT,
+      region: S3_REGION,
+      credentials: {
+        accessKeyId: S3_ACCESS_KEY_ID,
+        secretAccessKey: S3_SECRET_ACCESS_KEY,
+      },
+      forcePathStyle: S3_FORCE_PATH_STYLE,
+    })
+  : null;
 
 const EMPTY_CATALOG = {
   collections: {},
@@ -197,8 +223,34 @@ app.post(
         return;
       }
 
-      await ensureDataDirectories();
       const filename = `${crypto.randomUUID()}${safeUploadExtension(contentType, request.get('x-filename'))}`;
+
+      if (s3Client) {
+        try {
+          const s3Key = `uploads/${filename}`;
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: S3_BUCKET,
+              Key: s3Key,
+              Body: request.body,
+              ContentType: contentType,
+            }),
+          );
+
+          const publicPrefix = S3_PUBLIC_URL_PREFIX
+            ? S3_PUBLIC_URL_PREFIX.replace(/\/+$/, '')
+            : `${S3_ENDPOINT.replace(/\/+$/, '')}/${S3_BUCKET}`;
+          const publicUrl = `${publicPrefix}/${s3Key}`;
+
+          response.status(201).json({ url: publicUrl });
+          return;
+        } catch (s3Error) {
+          console.error('S3 upload error, falling back to local filesystem:', s3Error);
+        }
+      }
+
+      // Local fallback
+      await ensureDataDirectories();
       await fs.writeFile(path.join(UPLOADS_DIR, filename), request.body, { flag: 'wx' });
       response.status(201).json({ url: `/uploads/${filename}` });
     } catch (error) {
